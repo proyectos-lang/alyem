@@ -69,8 +69,12 @@ export function UsuarioForm({ usuario, empresas }: { usuario?: Usuario; empresas
           <Input id="nombre" name="nombre" defaultValue={usuario?.nombre} required />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">Correo</Label>
-          <Input id="email" name="email" type="email" defaultValue={usuario?.email} required />
+          <Label htmlFor="usuario">Usuario (para iniciar sesión)</Label>
+          <Input id="usuario" name="usuario" autoCapitalize="none" defaultValue={usuario?.usuario ?? ""} required />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="email">Correo (opcional)</Label>
+          <Input id="email" name="email" type="email" defaultValue={usuario?.email ?? ""} />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="password">Contraseña</Label>

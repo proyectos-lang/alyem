@@ -13,21 +13,21 @@ export interface ResultadoLogin {
   destino?: string
 }
 
-// Login básico (demo): valida email + contraseña contra la tabla usuarios y
+// Login básico (demo): valida usuario + contraseña contra la tabla usuarios y
 // restringe por audiencia (clientes vs. corporativo = operador/admin).
 export async function iniciarSesion(
   tipo: TipoAcceso,
-  email: string,
+  usuario: string,
   password: string,
 ): Promise<ResultadoLogin> {
   const sb = getSupabase()
-  const correo = email.trim().toLowerCase()
-  if (!correo || !password) return { ok: false, error: "Ingresa correo y contraseña." }
+  const nombreUsuario = usuario.trim().toLowerCase()
+  if (!nombreUsuario || !password) return { ok: false, error: "Ingresa usuario y contraseña." }
 
   const { data: u } = await sb
     .from("usuarios")
     .select("id, rol, activo, password")
-    .eq("email", correo)
+    .eq("usuario", nombreUsuario)
     .maybeSingle()
 
   if (!u || !u.activo || u.password !== password) {

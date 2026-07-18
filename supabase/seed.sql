@@ -10,14 +10,14 @@ insert into empresas (id, nombre, id_fiscal, contacto) values
   ('10000000-0000-0000-0000-000000000001', 'Importadora del Valle S.A.', '08019995123456', 'compras@importadoravalle.hn'),
   ('10000000-0000-0000-0000-000000000002', 'Comercial Pacífico S. de R.L.', '05019990654321', 'logistica@comercialpacifico.hn');
 
--- Usuarios con contraseña (login básico del demo) ----------------------------
-insert into usuarios (id, empresa_id, nombre, email, password, rol) values
-  ('20000000-0000-0000-0000-000000000001', null, 'Ana Robles (Admin)',        'admin@agenciaduanera.hn',  'admin123',  'admin'),
-  ('20000000-0000-0000-0000-000000000002', null, 'Carlos Méndez (Operador)',  'carlos@agenciaduanera.hn', 'carlos123', 'operador'),
-  ('20000000-0000-0000-0000-000000000003', null, 'Diana Fuentes (Operador)',  'diana@agenciaduanera.hn',  'diana123',  'operador'),
-  ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', 'Luis Portillo',   'luis@importadoravalle.hn', 'luis123',  'cliente'),
-  ('20000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001', 'María Cálix',     'maria@importadoravalle.hn','maria123', 'cliente'),
-  ('20000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000002', 'Jorge Almendárez','jorge@comercialpacifico.hn','jorge123','cliente');
+-- Usuarios con nombre de usuario y contraseña (login básico del demo) ---------
+insert into usuarios (id, empresa_id, nombre, usuario, email, password, rol) values
+  ('20000000-0000-0000-0000-000000000001', null, 'Ana Robles (Admin)',        'admin',  'admin@agenciaduanera.hn',  'admin123',  'admin'),
+  ('20000000-0000-0000-0000-000000000002', null, 'Carlos Méndez (Operador)',  'carlos', 'carlos@agenciaduanera.hn', 'carlos123', 'operador'),
+  ('20000000-0000-0000-0000-000000000003', null, 'Diana Fuentes (Operador)',  'diana',  'diana@agenciaduanera.hn',  'diana123',  'operador'),
+  ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', 'Luis Portillo',   'luis',  'luis@importadoravalle.hn', 'luis123',  'cliente'),
+  ('20000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001', 'María Cálix',     'maria', 'maria@importadoravalle.hn','maria123', 'cliente'),
+  ('20000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000002', 'Jorge Almendárez','jorge', 'jorge@comercialpacifico.hn','jorge123','cliente');
 
 -- Catálogo de estados --------------------------------------------------------
 insert into estados_catalogo (id, nombre, orden, color, notifica_cliente, tipo) values

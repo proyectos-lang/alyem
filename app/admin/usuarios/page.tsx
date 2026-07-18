@@ -48,7 +48,7 @@ export default async function UsuariosPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Correo</TableHead>
+                <TableHead>Usuario</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Empresa</TableHead>
                 <TableHead>Permisos</TableHead>
@@ -60,7 +60,7 @@ export default async function UsuariosPage() {
               {usuarios.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.nombre}</TableCell>
-                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{u.usuario ?? "—"}</TableCell>
                   <TableCell>
                     <Badge variant={ROL_VARIANT[u.rol]}>{ROL_LABEL[u.rol]}</Badge>
                   </TableCell>

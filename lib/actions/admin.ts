@@ -43,13 +43,14 @@ export async function guardarUsuario(form: FormData) {
 
   const fila: Record<string, unknown> = {
     nombre: String(form.get("nombre") ?? "").trim(),
-    email: String(form.get("email") ?? "").trim().toLowerCase(),
+    usuario: String(form.get("usuario") ?? "").trim().toLowerCase(),
+    email: String(form.get("email") ?? "").trim().toLowerCase() || null,
     rol,
     empresa_id: rol === "cliente" ? empresaId : null,
     permisos: usarDefaults ? null : permisosSel,
     activo: true,
   }
-  if (!fila.nombre || !fila.email) throw new Error("Nombre y correo son obligatorios.")
+  if (!fila.nombre || !fila.usuario) throw new Error("Nombre y usuario son obligatorios.")
 
   // Contraseña: obligatoria al crear; en edición solo se actualiza si se ingresa.
   const password = String(form.get("password") ?? "").trim()

@@ -11,8 +11,8 @@ uno con las acciones que le corresponden; nada se comunica por fuera que no qued
 
 ## Acceso e inicio de sesión
 
-Login básico con usuarios y contraseñas en la tabla `usuarios` (contraseña en texto plano —
-demo, no producción). La pantalla de login (`/login`) ofrece dos accesos:
+Login básico con **nombre de usuario** y contraseña en la tabla `usuarios` (contraseña en texto
+plano — demo, no producción). La pantalla de login (`/login`) ofrece dos accesos:
 
 - **Acceso clientes** — cuentas de rol `cliente`.
 - **Acceso corporativo** — cuentas de la agencia (`operador` y `admin`).
@@ -23,14 +23,14 @@ enlace público `/track` son las únicas rutas abiertas.
 
 ### Cuentas del demo
 
-| Rol | Correo | Contraseña |
+| Rol | Usuario | Contraseña |
 |---|---|---|
-| Administrador | admin@agenciaduanera.hn | admin123 |
-| Operador | carlos@agenciaduanera.hn | carlos123 |
-| Operador | diana@agenciaduanera.hn | diana123 |
-| Cliente (Valle) | luis@importadoravalle.hn | luis123 |
-| Cliente (Valle) | maria@importadoravalle.hn | maria123 |
-| Cliente (Pacífico) | jorge@comercialpacifico.hn | jorge123 |
+| Administrador | admin | admin123 |
+| Operador | carlos | carlos123 |
+| Operador | diana | diana123 |
+| Cliente (Valle) | luis | luis123 |
+| Cliente (Valle) | maria | maria123 |
+| Cliente (Pacífico) | jorge | jorge123 |
 
 ## Roles y permisos
 

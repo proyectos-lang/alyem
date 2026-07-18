@@ -26,7 +26,8 @@ export interface Usuario {
   id: string
   empresa_id: string | null
   nombre: string
-  email: string
+  usuario: string | null
+  email: string | null
   rol: Rol
   permisos: string[] | null
   activo: boolean

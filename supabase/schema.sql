@@ -76,7 +76,9 @@ create table usuarios (
   id          uuid primary key default gen_random_uuid(),
   empresa_id  uuid references empresas(id) on delete set null,
   nombre      text not null,
-  email       text not null unique,
+  -- Login por nombre de usuario (no correo).
+  usuario     text unique,
+  email       text unique,            -- contacto (opcional)
   -- Login básico del demo: contraseña en texto plano (NO usar en producción).
   password    text,
   rol         rol_usuario not null,

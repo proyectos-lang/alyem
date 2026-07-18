@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label"
 import { iniciarSesion, type TipoAcceso } from "@/lib/actions/auth"
 
 const INFO: Record<TipoAcceso, { titulo: string; icon: typeof Users; hint: string }> = {
-  cliente: { titulo: "Acceso clientes", icon: Users, hint: "luis@importadoravalle.hn · luis123" },
-  corporativo: { titulo: "Acceso corporativo", icon: Building2, hint: "admin@agenciaduanera.hn · admin123" },
+  cliente: { titulo: "Acceso clientes", icon: Users, hint: "usuario: luis · clave: luis123" },
+  corporativo: { titulo: "Acceso corporativo", icon: Building2, hint: "usuario: admin · clave: admin123" },
 }
 
 export function LoginForm({ agencia }: { agencia: string }) {
@@ -24,10 +24,10 @@ export function LoginForm({ agencia }: { agencia: string }) {
     if (!tipo) return
     setError(null)
     const fd = new FormData(e.currentTarget)
-    const email = String(fd.get("email") ?? "")
+    const usuario = String(fd.get("usuario") ?? "")
     const password = String(fd.get("password") ?? "")
     startTransition(async () => {
-      const r = await iniciarSesion(tipo, email, password)
+      const r = await iniciarSesion(tipo, usuario, password)
       if (r.ok && r.destino) router.push(r.destino)
       else setError(r.error ?? "No se pudo iniciar sesión.")
     })
@@ -87,8 +87,8 @@ export function LoginForm({ agencia }: { agencia: string }) {
           </button>
           <p className="text-sm font-medium">{INFO[tipo].titulo}</p>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Correo</Label>
-            <Input id="email" name="email" type="email" autoComplete="username" required />
+            <Label htmlFor="usuario">Usuario</Label>
+            <Input id="usuario" name="usuario" type="text" autoComplete="username" autoCapitalize="none" required />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="password">Contraseña</Label>
