@@ -157,6 +157,8 @@ create table gestiones (
   dias_libres          int,
   fecha_inicio_libres  date,
   unidades_importadas  numeric,
+  valor_cif            numeric,              -- valor CIF (métrica de operación)
+  peso_kg              numeric,              -- peso total en kg
   public_token         text not null unique default replace(gen_random_uuid()::text, '-', ''),
   created_at           timestamptz not null default now()
 );

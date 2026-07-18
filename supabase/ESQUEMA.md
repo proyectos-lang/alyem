@@ -109,3 +109,7 @@
   Esquema `aylem` con grants y auto-exposición a PostgREST.
 - **Login básico** — `usuarios.password` (texto plano, demo). En bases ya sembradas aplicar
   `migracion-login.sql` (agrega la columna y fija las contraseñas del demo).
+- **Login por usuario** — `usuarios.usuario` (único); el correo pasa a opcional.
+  Aplicar `migracion-usuario.sql`.
+- **Métricas de operación** — `gestiones.valor_cif`, `gestiones.peso_kg`. Aplicar
+  `migracion-operacion.sql`.

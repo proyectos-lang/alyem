@@ -1,4 +1,4 @@
-import { fecha } from "@/lib/format"
+import { fecha, moneda } from "@/lib/format"
 import type { GestionConEstado } from "@/lib/data/gestiones"
 
 const TIPO_OP = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" }
@@ -35,6 +35,8 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
       <dl>
         <Dato label="Puerto de origen" valor={g.puerto_origen} />
         <Dato label="Puerto de destino" valor={g.puerto_destino} />
+        <Dato label="Valor CIF" valor={g.valor_cif != null ? moneda(g.valor_cif) : null} />
+        <Dato label="Peso" valor={g.peso_kg != null ? `${g.peso_kg.toLocaleString("es-HN")} kg` : null} />
         <Dato label="ETA" valor={fecha(g.eta)} />
         <Dato label="Arribo real" valor={fecha(g.fecha_arribo)} />
         <Dato label="Liberación" valor={fecha(g.fecha_liberacion)} />

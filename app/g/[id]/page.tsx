@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowLeft, Pencil, Building2, Ship, Plane, Truck } from "lucide-react"
+import { ArrowLeft, Pencil, Building2, Ship, Plane, Truck, Coins, Receipt, Weight, Container } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -18,6 +18,11 @@ import { StarDisplay } from "@/components/star-rating"
 import { DiasLibresBadge } from "@/components/dias-libres-badge"
 import { LandedCostCard } from "@/components/landed-cost-card"
 import { CopiarTrack } from "@/components/copiar-track"
+import { Breadcrumb } from "@/components/breadcrumb"
+import { StepperTrazabilidad } from "@/components/stepper-trazabilidad"
+import { OperacionPanel } from "@/components/operacion-panel"
+import { AvanzarEtapa } from "@/components/avanzar-etapa"
+import { StatCard } from "@/components/stat-card"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import {
@@ -26,7 +31,7 @@ import {
 } from "@/lib/data/gestiones"
 import { getTiposDocumento, getConceptos, getCuentas } from "@/lib/data/catalogos"
 import { puede, esAgencia, PERMISOS } from "@/lib/permisos"
-import { fecha } from "@/lib/format"
+import { fecha, moneda } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
 
@@ -75,9 +80,23 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
   const backHref = usuario.rol === "cliente" ? "/panel/gestiones" : "/agencia/gestiones"
   const ModoIcon = MODO_ICON[g.modo]
 
+  // Impuestos estimados: líneas de liquidación con concepto de categoría "impuesto".
+  let impuestosEst = 0
+  for (const liq of liquidaciones)
+    if (liq.estado !== "anulada")
+      for (const l of liq.lineas ?? [])
+        if (!l.anulada && l.concepto?.categoria === "impuesto") impuestosEst += Number(l.monto)
+
+  const TIPO_LABEL = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" } as const
+  const esFinal = g.estado?.tipo === "final" || g.estado?.tipo === "cancelada"
+  const tabInicial = agencia ? "operacion" : "timeline"
+
   return (
     <PortalShell>
       <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6">
+        {agencia && (
+          <Breadcrumb items={["Operaciones", TIPO_LABEL[g.tipo_operacion]]} destacado={g.referencia} />
+        )}
         <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> Volver
         </Link>
@@ -98,8 +117,10 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                       <Building2 className="size-3.5" /> {g.empresa?.nombre}
                     </span>
                   )}
+                  {g.descripcion_mercancia && <span>{g.descripcion_mercancia}</span>}
+                  {g.puerto_destino && <span>{g.puerto_destino}</span>}
                   <span className="inline-flex items-center gap-1">
-                    <ModoIcon className="size-3.5" /> {g.tipo_operacion}
+                    <ModoIcon className="size-3.5" /> {TIPO_LABEL[g.tipo_operacion]}
                   </span>
                   <span>ETA {fecha(g.eta)}</span>
                   {g.referencia_cliente && <span>PO: {g.referencia_cliente}</span>}
@@ -124,10 +145,36 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                     puedeRegistrar={puede(usuario, PERMISOS.EVENTO_REGISTRAR)}
                   />
                 )}
+                {agencia && puede(usuario, PERMISOS.EVENTO_REGISTRAR) && (
+                  <AvanzarEtapa gestionId={g.id} deshabilitado={esFinal} />
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Métricas de operación (agencia) */}
+        {agencia && (
+          <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard label="Valor CIF" value={g.valor_cif != null ? moneda(g.valor_cif) : "—"} icon={Coins} />
+            <StatCard label="Impuestos est." value={moneda(impuestosEst)} icon={Receipt} tone="warning" />
+            <StatCard
+              label="Peso"
+              value={g.peso_kg != null ? `${g.peso_kg.toLocaleString("es-HN")} kg` : "—"}
+              icon={Weight}
+            />
+            <StatCard
+              label="Contenedor"
+              value={<span className="font-mono text-lg">{g.contenedores ?? "—"}</span>}
+              icon={Container}
+            />
+          </div>
+        )}
+
+        {/* Stepper de trazabilidad */}
+        <div className="mt-4">
+          <StepperTrazabilidad estados={estados} eventos={eventos} estadoActualId={g.estado?.estado_id} />
+        </div>
 
         {/* Satisfacción */}
         {puedeCalificar && (
@@ -148,8 +195,9 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
         )}
 
         {/* Pestañas */}
-        <Tabs defaultValue="timeline" className="mt-6">
+        <Tabs defaultValue={tabInicial} className="mt-6">
           <TabsList>
+            {agencia && <TabsTrigger value="operacion">Operación</TabsTrigger>}
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="documentos">
               Documentos{docsPendientes > 0 ? ` (${docsPendientes})` : ""}
@@ -158,6 +206,12 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
             <TabsTrigger value="mensajes">Mensajes</TabsTrigger>
             <TabsTrigger value="datos">Datos</TabsTrigger>
           </TabsList>
+
+          {agencia && (
+            <TabsContent value="operacion">
+              <OperacionPanel g={g} eventos={eventos} documentos={documentos} />
+            </TabsContent>
+          )}
 
           <TabsContent value="timeline">
             <Card>

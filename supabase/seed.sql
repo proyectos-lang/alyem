@@ -125,6 +125,12 @@ insert into gestiones (id, referencia, empresa_id, operador_id, referencia_clien
    'Café tostado en grano', 'Comercial Pacífico', '2026-07-19', '2026-07-15 14:00-06',
    'pacifico0004tokenpublicoseguimiento4');
 
+-- Métricas de operación (Valor CIF y Peso) -----------------------------------
+update gestiones set valor_cif = 1284500, peso_kg = 12450 where referencia = 'GES-2026-0001';
+update gestiones set valor_cif =  345800, peso_kg =   820 where referencia = 'GES-2026-0002';
+update gestiones set valor_cif =  978000, peso_kg =  9600 where referencia = 'GES-2026-0003';
+update gestiones set valor_cif =  512300, peso_kg =  6400 where referencia = 'GES-2026-0004';
+
 -- ============================================================================
 -- Eventos (timeline)
 -- ============================================================================

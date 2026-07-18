@@ -92,6 +92,14 @@ export function EditarDatosForm({ g }: { g: Gestion }) {
           <Label>Unidades importadas (para landed cost)</Label>
           <Input name="unidades_importadas" type="number" step="any" defaultValue={g.unidades_importadas ?? ""} />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Valor CIF (L)</Label>
+          <Input name="valor_cif" type="number" step="any" defaultValue={g.valor_cif ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Peso (kg)</Label>
+          <Input name="peso_kg" type="number" step="any" defaultValue={g.peso_kg ?? ""} />
+        </div>
       </div>
       <div className="flex flex-col gap-1.5">
         <Label>Descripción de la mercancía</Label>

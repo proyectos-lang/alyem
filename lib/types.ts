@@ -95,6 +95,8 @@ export interface Gestion {
   dias_libres: number | null
   fecha_inicio_libres: string | null
   unidades_importadas: number | null
+  valor_cif: number | null
+  peso_kg: number | null
   public_token: string
   created_at: string
   empresa?: Pick<Empresa, "id" | "nombre"> | null

@@ -163,6 +163,45 @@ export async function fijarUnidades(gestionId: string, unidades: number) {
   revalidatePath(`/g/${gestionId}`)
 }
 
+// Avanza la gestión al siguiente estado del flujo (normal+final, por orden).
+export async function avanzarEtapa(gestionId: string) {
+  const usuario = await getUsuarioActivo()
+  exigir(usuario, PERMISOS.EVENTO_REGISTRAR)
+  const sb = getSupabase()
+
+  const { data: estadosData } = await sb
+    .from("estados_catalogo")
+    .select("id, nombre, orden, tipo, notifica_cliente")
+    .eq("activo", true)
+    .in("tipo", ["normal", "final"])
+    .order("orden")
+  const flujo = estadosData ?? []
+  if (flujo.length === 0) throw new Error("No hay estados configurados.")
+
+  const { data: actual } = await sb
+    .from("v_gestion_estado_actual")
+    .select("estado_id")
+    .eq("gestion_id", gestionId)
+    .maybeSingle()
+  const idx = actual?.estado_id ? flujo.findIndex((e) => e.id === actual.estado_id) : -1
+  const siguiente = flujo[idx + 1]
+  if (!siguiente) throw new Error("La operación ya está en la etapa final.")
+
+  await sb.from("eventos").insert({
+    gestion_id: gestionId,
+    tipo: "estado",
+    estado_id: siguiente.id,
+    observacion: `Avance de etapa: ${siguiente.nombre}.`,
+    usuario_id: usuario!.id,
+  })
+
+  if (siguiente.notifica_cliente) {
+    const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
+    if (g) await notificarEmpresa(g.empresa_id, "evento", `${g.referencia}: ${siguiente.nombre}.`, gestionId)
+  }
+  revalidatePath(`/g/${gestionId}`)
+}
+
 // Operador edita los datos de la carga.
 export async function editarDatosGestion(form: FormData) {
   const usuario = await getUsuarioActivo()
@@ -181,7 +220,7 @@ export async function editarDatosGestion(form: FormData) {
     const v = form.get(c) as string
     patch[c] = v ? v : null
   }
-  for (const c of ["dias_libres", "unidades_importadas"]) {
+  for (const c of ["dias_libres", "unidades_importadas", "valor_cif", "peso_kg"]) {
     const v = form.get(c) as string
     patch[c] = v ? Number(v) : null
   }
