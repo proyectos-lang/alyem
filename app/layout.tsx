@@ -9,8 +9,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Aurora — Tienda en línea',
-  description: 'Tu marketplace todo en uno, del gerente al cliente final.',
+  title: 'Aduana — Seguimiento de gestiones',
+  description: 'Plataforma de seguimiento aduanero: la agencia y sus clientes sobre una sola fuente de verdad.',
   generator: 'v0.app',
   icons: {
     icon: [
