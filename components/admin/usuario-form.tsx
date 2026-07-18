@@ -73,6 +73,16 @@ export function UsuarioForm({ usuario, empresas }: { usuario?: Usuario; empresas
           <Input id="email" name="email" type="email" defaultValue={usuario?.email} required />
         </div>
         <div className="flex flex-col gap-1.5">
+          <Label htmlFor="password">Contraseña</Label>
+          <Input
+            id="password"
+            name="password"
+            type="text"
+            placeholder={usuario ? "Dejar vacío para no cambiar" : "Requerida"}
+            required={!usuario}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="rol">Rol</Label>
           <Select id="rol" name="rol" value={rol} onChange={(e) => cambiarRol(e.target.value as Rol)}>
             <option value="cliente">Cliente</option>

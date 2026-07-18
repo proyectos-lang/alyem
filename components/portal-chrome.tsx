@@ -3,19 +3,19 @@
 import { useState } from "react"
 import { Menu } from "lucide-react"
 import { PortalSidebar } from "@/components/portal-sidebar"
-import { UserSwitcher } from "@/components/user-switcher"
+import { UsuarioMenu } from "@/components/usuario-menu"
 import { NotificacionesMenu } from "@/components/notificaciones-menu"
 import type { Notificacion, Usuario } from "@/lib/types"
 
 export function PortalChrome({
   usuario,
-  usuarios,
+  permisos,
   notificaciones,
   agencia,
   children,
 }: {
   usuario: Usuario
-  usuarios: Usuario[]
+  permisos: string[]
   notificaciones: Notificacion[]
   agencia: string
   children: React.ReactNode
@@ -24,7 +24,7 @@ export function PortalChrome({
 
   return (
     <div className="min-h-screen bg-background md:pl-64">
-      <PortalSidebar rol={usuario.rol} agencia={agencia} open={open} onClose={() => setOpen(false)} />
+      <PortalSidebar rol={usuario.rol} permisos={permisos} agencia={agencia} open={open} onClose={() => setOpen(false)} />
 
       <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur">
         <button
@@ -36,7 +36,7 @@ export function PortalChrome({
         </button>
         <div className="ml-auto flex items-center gap-2">
           <NotificacionesMenu notificaciones={notificaciones} />
-          <UserSwitcher usuarios={usuarios} activo={usuario} />
+          <UsuarioMenu usuario={usuario} />
         </div>
       </header>
 

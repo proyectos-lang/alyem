@@ -3,23 +3,25 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Ship, X } from "lucide-react"
-import { navPara } from "@/lib/nav"
+import { navFiltrado } from "@/lib/nav"
 import type { Rol } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export function PortalSidebar({
   rol,
+  permisos,
   agencia,
   open,
   onClose,
 }: {
   rol: Rol
+  permisos: string[]
   agencia: string
   open: boolean
   onClose: () => void
 }) {
   const pathname = usePathname()
-  const groups = navPara(rol)
+  const groups = navFiltrado(rol, permisos)
 
   const activo = (href: string) =>
     href === pathname || (href !== "/panel" && href !== "/agencia" && href !== "/admin" && pathname.startsWith(href))

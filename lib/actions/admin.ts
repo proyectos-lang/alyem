@@ -51,8 +51,17 @@ export async function guardarUsuario(form: FormData) {
   }
   if (!fila.nombre || !fila.email) throw new Error("Nombre y correo son obligatorios.")
 
-  if (id) await sb.from("usuarios").update(fila).eq("id", id)
-  else await sb.from("usuarios").insert(fila)
+  // Contraseña: obligatoria al crear; en edición solo se actualiza si se ingresa.
+  const password = String(form.get("password") ?? "").trim()
+
+  if (id) {
+    if (password) fila.password = password
+    await sb.from("usuarios").update(fila).eq("id", id)
+  } else {
+    if (!password) throw new Error("La contraseña es obligatoria al crear un usuario.")
+    fila.password = password
+    await sb.from("usuarios").insert(fila)
+  }
   revalidatePath("/admin/usuarios")
 }
 

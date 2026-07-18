@@ -12,8 +12,6 @@ export default async function Home() {
   } catch (e) {
     return <SetupNotice mensaje={(e as Error).message} />
   }
-  if (!usuario) {
-    return <SetupNotice mensaje="No hay usuarios. Ejecuta supabase/seed.sql en tu proyecto de Supabase." />
-  }
+  if (!usuario) redirect("/login")
   redirect(inicioPara(usuario.rol))
 }

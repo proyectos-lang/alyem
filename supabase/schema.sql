@@ -77,6 +77,8 @@ create table usuarios (
   empresa_id  uuid references empresas(id) on delete set null,
   nombre      text not null,
   email       text not null unique,
+  -- Login básico del demo: contraseña en texto plano (NO usar en producción).
+  password    text,
   rol         rol_usuario not null,
   -- null => usa los permisos por defecto del rol (ver lib/permisos.ts);
   -- si tiene valor, es la lista explícita de claves de permiso que aplica.

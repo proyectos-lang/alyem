@@ -52,9 +52,9 @@
 
 ### Identidad y permisos
 - **`empresas`** — empresas cliente. `nombre, id_fiscal, contacto, activo`.
-- **`usuarios`** — personas. `empresa_id?, nombre, email (único), rol, permisos jsonb?, activo`.
-  `permisos` null ⇒ usa los defaults del rol (ver `lib/permisos.ts`); si tiene valor, es la
-  lista explícita de claves que aplica.
+- **`usuarios`** — personas. `empresa_id?, nombre, email (único), password, rol, permisos jsonb?, activo`.
+  `password` es texto plano (login básico del demo, no producción). `permisos` null ⇒ usa los
+  defaults del rol (ver `lib/permisos.ts`); si tiene valor, es la lista explícita de claves que aplica.
 
 ### Catálogos (configurables por admin)
 - **`estados_catalogo`** — `nombre, orden, color, notifica_cliente, tipo, activo`.
@@ -107,3 +107,5 @@
 - **Fase A–B** — versión inicial: identidad, permisos, catálogos, gestiones, eventos, documentos,
   requeridos, financiero, notificaciones, mensajes, cotizaciones, calificaciones y las 3 vistas.
   Esquema `aylem` con grants y auto-exposición a PostgREST.
+- **Login básico** — `usuarios.password` (texto plano, demo). En bases ya sembradas aplicar
+  `migracion-login.sql` (agrega la columna y fija las contraseñas del demo).
