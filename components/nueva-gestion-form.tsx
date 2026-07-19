@@ -9,8 +9,11 @@ import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { crearGestion } from "@/lib/actions/gestiones"
+import type { Empresa } from "@/lib/types"
 
-export function NuevaGestionForm() {
+// Si se pasan `empresas`, el formulario es el de la agencia creando a nombre de
+// un cliente (muestra el selector de empresa). Si no, es el del propio cliente.
+export function NuevaGestionForm({ empresas }: { empresas?: Empresa[] }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -33,6 +36,24 @@ export function NuevaGestionForm() {
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <Card>
         <CardContent className="grid grid-cols-1 gap-4 pt-5 sm:grid-cols-2">
+          {empresas && (
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label>Empresa cliente</Label>
+              <Select name="empresa_id" defaultValue="" required>
+                <option value="" disabled>
+                  Selecciona la empresa…
+                </option>
+                {empresas.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.nombre}
+                  </option>
+                ))}
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                La gestión se registra a nombre de este cliente y queda aceptada y asignada a ti.
+              </p>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <Label>Tipo de operación</Label>
             <Select name="tipo_operacion" defaultValue="importacion">
@@ -89,8 +110,9 @@ export function NuevaGestionForm() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Completa lo que tengas disponible. La agencia validará y completará los datos faltantes al aceptar la
-        gestión.
+        {empresas
+          ? "Completa lo que tengas del embarque; los datos faltantes se pueden editar después desde el detalle de la operación."
+          : "Completa lo que tengas disponible. La agencia validará y completará los datos faltantes al aceptar la gestión."}
       </p>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

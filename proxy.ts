@@ -4,7 +4,8 @@ import type { NextRequest } from "next/server"
 // Rutas públicas (sin sesión): login y enlace público de seguimiento.
 const PUBLICAS = ["/login", "/track"]
 
-export function middleware(req: NextRequest) {
+// Convención `proxy` de Next 16 (sustituye a `middleware`).
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
   if (PUBLICAS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next()

@@ -1,7 +1,8 @@
 import Link from "next/link"
-import { Ship, Plane, Truck } from "lucide-react"
+import { Ship, Plane, Truck, Eye } from "lucide-react"
 import { EstadoChip } from "@/components/estado-chip"
 import { DiasLibresBadge } from "@/components/dias-libres-badge"
+import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fecha, haceCuanto } from "@/lib/format"
@@ -34,6 +35,7 @@ export function GestionesTabla({
             <TableHead>Estado</TableHead>
             <TableHead>ETA</TableHead>
             <TableHead>Actualizada</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -70,12 +72,19 @@ export function GestionesTabla({
                 </TableCell>
                 <TableCell className="text-muted-foreground">{fecha(g.eta)}</TableCell>
                 <TableCell className="text-muted-foreground">{haceCuanto(g.estado?.fecha ?? g.created_at)}</TableCell>
+                <TableCell className="text-right">
+                  <Link href={`/g/${g.id}`}>
+                    <Button size="xs" variant="outline">
+                      <Eye /> Ver operación
+                    </Button>
+                  </Link>
+                </TableCell>
               </TableRow>
             )
           })}
           {gestiones.length === 0 && (
             <TableRow>
-              <TableCell colSpan={mostrarEmpresa ? 7 : 6} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={mostrarEmpresa ? 8 : 7} className="py-10 text-center text-muted-foreground">
                 No hay gestiones que coincidan.
               </TableCell>
             </TableRow>

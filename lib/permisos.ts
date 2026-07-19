@@ -29,7 +29,7 @@ export type ClavePermiso = (typeof PERMISOS)[keyof typeof PERMISOS]
 
 // Metadatos para el módulo de gestión de permisos (agrupa las casillas).
 export const PERMISOS_META: { clave: ClavePermiso; etiqueta: string; grupo: string }[] = [
-  { clave: PERMISOS.GESTION_CREAR, etiqueta: "Crear solicitudes de gestión", grupo: "Gestiones" },
+  { clave: PERMISOS.GESTION_CREAR, etiqueta: "Crear gestiones (propias o a nombre de un cliente)", grupo: "Gestiones" },
   { clave: PERMISOS.GESTION_VER_TODAS, etiqueta: "Ver todas las gestiones", grupo: "Gestiones" },
   { clave: PERMISOS.GESTION_ACEPTAR, etiqueta: "Aceptar/rechazar solicitudes", grupo: "Gestiones" },
   { clave: PERMISOS.GESTION_EDITAR, etiqueta: "Editar datos de la carga", grupo: "Gestiones" },
@@ -65,6 +65,7 @@ const DEFAULTS: Record<Rol, ClavePermiso[]> = {
     P.REPORTES_VER,
   ],
   operador: [
+    P.GESTION_CREAR,
     P.GESTION_VER_TODAS,
     P.GESTION_ACEPTAR,
     P.GESTION_EDITAR,

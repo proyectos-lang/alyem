@@ -1,13 +1,15 @@
 import Link from "next/link"
-import { Inbox, CreditCard, FileCheck, Boxes } from "lucide-react"
+import { Inbox, CreditCard, FileCheck, Boxes, Plus } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { GestionesTabla } from "@/components/gestiones-tabla"
 import { Buscador } from "@/components/buscador"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EstadoChip } from "@/components/estado-chip"
 import { SetupNotice } from "@/components/setup-notice"
+import { puede, PERMISOS } from "@/lib/permisos"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
 import { getSupabase } from "@/lib/supabase/server"
@@ -33,7 +35,19 @@ export default async function BandejaAgencia({ searchParams }: { searchParams: P
   return (
     <PortalShell roles={["operador", "admin"]}>
       <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6">
-        <PageHeader titulo="Bandeja de operación" descripcion="Lo que requiere tu atención hoy." />
+        <PageHeader
+          titulo="Bandeja de operación"
+          descripcion="Lo que requiere tu atención hoy."
+          acciones={
+            puede(usuario, PERMISOS.GESTION_CREAR) ? (
+              <Link href="/agencia/gestiones/nueva">
+                <Button>
+                  <Plus /> Nueva gestión
+                </Button>
+              </Link>
+            ) : undefined
+          }
+        />
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Solicitudes nuevas" value={solicitudes.length} icon={Inbox} tone={solicitudes.length ? "warning" : "default"} />

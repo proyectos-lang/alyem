@@ -29,18 +29,33 @@ async function siguienteReferencia(): Promise<string> {
   return `GES-${anio}-${String(n).padStart(4, "0")}`
 }
 
-// Cliente crea una solicitud de gestión.
+// Crea una gestión. El cliente la crea para su empresa; el personal de la agencia
+// puede crearla a nombre de una empresa cliente (queda aceptada y asignada a él).
 export async function crearGestion(form: FormData): Promise<string> {
   const usuario = await getUsuarioActivo()
   exigir(usuario, PERMISOS.GESTION_CREAR)
-  if (!usuario!.empresa_id) throw new Error("Tu usuario no está asociado a una empresa.")
   const sb = getSupabase()
+
+  const desdeAgencia = usuario!.rol === "operador" || usuario!.rol === "admin"
+  const empresaId = desdeAgencia ? ((form.get("empresa_id") as string) || null) : usuario!.empresa_id
+  if (!empresaId) {
+    throw new Error(
+      desdeAgencia ? "Selecciona la empresa cliente." : "Tu usuario no está asociado a una empresa.",
+    )
+  }
+
+  let consignatario = usuario!.empresa?.nombre ?? null
+  if (desdeAgencia) {
+    const { data: emp } = await sb.from("empresas").select("nombre").eq("id", empresaId).maybeSingle()
+    consignatario = (emp?.nombre as string) ?? null
+  }
 
   const referencia = await siguienteReferencia()
   const g = {
     referencia,
-    empresa_id: usuario!.empresa_id,
-    consignatario: usuario!.empresa?.nombre ?? null,
+    empresa_id: empresaId,
+    operador_id: desdeAgencia ? usuario!.id : null,
+    consignatario,
     referencia_cliente: (form.get("referencia_cliente") as string) || null,
     tipo_operacion: (form.get("tipo_operacion") as string) || "importacion",
     modo: (form.get("modo") as string) || "maritimo",
@@ -57,18 +72,38 @@ export async function crearGestion(form: FormData): Promise<string> {
   if (error) throw new Error(error.message)
   const gestionId = data.id as string
 
-  const estadoId = await estadoIdPorNombre("Solicitada")
+  const ahora = Date.now()
+  const estadoSolicitada = await estadoIdPorNombre("Solicitada")
   await sb.from("eventos").insert({
     gestion_id: gestionId,
     tipo: "estado",
-    estado_id: estadoId,
-    observacion: "Solicitud creada por el cliente.",
+    estado_id: estadoSolicitada,
+    fecha_evento: new Date(ahora).toISOString(),
+    observacion: desdeAgencia
+      ? `Gestión creada por la agencia a nombre de ${consignatario ?? "el cliente"}.`
+      : "Solicitud creada por el cliente.",
     usuario_id: usuario!.id,
   })
 
-  await notificarAgencia("solicitud_nueva", `Nueva solicitud ${referencia} de ${usuario!.empresa?.nombre ?? "cliente"}.`, gestionId)
+  if (desdeAgencia) {
+    // Creada por la agencia: queda aceptada y asignada a quien la creó.
+    const estadoAceptada = await estadoIdPorNombre("Aceptada%")
+    await sb.from("eventos").insert({
+      gestion_id: gestionId,
+      tipo: "estado",
+      estado_id: estadoAceptada,
+      fecha_evento: new Date(ahora + 1000).toISOString(),
+      observacion: `Aceptada. Operador asignado: ${usuario!.nombre}.`,
+      usuario_id: usuario!.id,
+    })
+    await notificarEmpresa(empresaId, "gestion_creada", `La agencia registró la gestión ${referencia} a tu nombre.`, gestionId)
+  } else {
+    await notificarAgencia("solicitud_nueva", `Nueva solicitud ${referencia} de ${consignatario ?? "cliente"}.`, gestionId)
+  }
+
   revalidatePath("/panel/gestiones")
   revalidatePath("/agencia")
+  revalidatePath("/agencia/gestiones")
   return gestionId
 }
 
