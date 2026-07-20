@@ -10,7 +10,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'Aylem Customs — Seguimiento aduanero',
-  description: 'Agencia de Aduana Aylem Customs: la agencia y sus clientes sobre una sola fuente de verdad.',
+  description: 'Aylem Customs: la agencia y sus clientes sobre una sola fuente de verdad.',
   generator: 'v0.app',
   icons: {
     icon: [
