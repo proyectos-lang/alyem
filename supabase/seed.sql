@@ -62,12 +62,12 @@ insert into conceptos_cobro (id, nombre, categoria) values
 
 -- Cuentas bancarias (instrucciones de pago) ----------------------------------
 insert into cuentas_bancarias (id, banco, numero, titular, moneda, instrucciones) values
-  ('60000000-0000-0000-0000-000000000001', 'Banco Atlántida', '0110-023-456789', 'Aylem Customs', 'HNL', 'Cuenta de ahorro. Enviar comprobante al reportar el pago.'),
-  ('60000000-0000-0000-0000-000000000002', 'Banco Ficohsa',   '2001-556677-USD', 'Aylem Customs', 'USD', 'Cuenta en dólares para flete e impuestos en USD.');
+  ('60000000-0000-0000-0000-000000000001', 'Banco Atlántida', '0110-023-456789', 'Alyem Customs', 'HNL', 'Cuenta de ahorro. Enviar comprobante al reportar el pago.'),
+  ('60000000-0000-0000-0000-000000000002', 'Banco Ficohsa',   '2001-556677-USD', 'Alyem Customs', 'USD', 'Cuenta en dólares para flete e impuestos en USD.');
 
 -- Configuración --------------------------------------------------------------
 insert into configuracion (clave, valor, descripcion) values
-  ('agencia_nombre',        'Aylem Customs',                  'Nombre mostrado en la app y reportes PDF'),
+  ('agencia_nombre',        'Alyem Customs',                  'Nombre mostrado en la app y reportes PDF'),
   ('zona_horaria',          'America/Tegucigalpa',            'Zona horaria de la agencia'),
   ('dias_gestion_fria',     '4',                              'Días sin actualización para marcar una gestión como "fría"'),
   ('estados_requieren_pago','30000000-0000-0000-0000-000000000008,30000000-0000-0000-0000-000000000009', 'Estados que alertan si hay saldo pendiente'),
