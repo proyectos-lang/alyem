@@ -12,17 +12,18 @@ import { SetupNotice } from "@/components/setup-notice"
 import { puede, PERMISOS } from "@/lib/permisos"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
+import { ordenarGestiones } from "@/lib/sort"
 import { getSupabase } from "@/lib/supabase/server"
 import { fecha } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
 
-export default async function BandejaAgencia({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function BandejaAgencia({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }) {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver la bandeja." />
-  const { q } = await searchParams
+  const { q, sort, dir } = await searchParams
 
-  const gestiones = await listarGestiones(usuario, { texto: q })
+  const gestiones = ordenarGestiones(await listarGestiones(usuario, { texto: q }), sort, dir)
   const solicitudes = gestiones.filter((g) => g.estado?.nombre === "Notificación del embarque")
   const activas = gestiones.filter((g) => g.estado?.tipo !== "final" && g.estado?.tipo !== "cancelada")
 

@@ -10,18 +10,19 @@ import { GestionesTabla } from "@/components/gestiones-tabla"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
+import { ordenarGestiones } from "@/lib/sort"
 import { getSupabase } from "@/lib/supabase/server"
 import { diasLibresRestantes } from "@/lib/data/metricas"
 import { haceCuanto } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
 
-export default async function PanelCliente({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function PanelCliente({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }) {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver el panel." />
-  const { q } = await searchParams
+  const { q, sort, dir } = await searchParams
 
-  const gestiones = await listarGestiones(usuario, { texto: q })
+  const gestiones = ordenarGestiones(await listarGestiones(usuario, { texto: q }), sort, dir)
   const activas = gestiones.filter((g) => g.estado?.tipo !== "final" && g.estado?.tipo !== "cancelada")
   const cerradas = gestiones.filter((g) => g.estado?.tipo === "final")
 

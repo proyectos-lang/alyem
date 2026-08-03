@@ -8,14 +8,15 @@ import { GestionesTabla } from "@/components/gestiones-tabla"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
+import { ordenarGestiones } from "@/lib/sort"
 
 export const dynamic = "force-dynamic"
 
-export default async function GestionesCliente({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function GestionesCliente({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }) {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver tus gestiones." />
-  const { q } = await searchParams
-  const gestiones = await listarGestiones(usuario, { texto: q })
+  const { q, sort, dir } = await searchParams
+  const gestiones = ordenarGestiones(await listarGestiones(usuario, { texto: q }), sort, dir)
 
   return (
     <PortalShell roles={["cliente"]}>

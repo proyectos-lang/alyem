@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Eye } from "lucide-react"
 import { EstadoChip } from "@/components/estado-chip"
 import { DiasLibresBadge } from "@/components/dias-libres-badge"
+import { SortHeader } from "@/components/sort-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -20,13 +21,13 @@ export function GestionesTabla({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Referencia</TableHead>
-            {mostrarEmpresa && <TableHead>Empresa</TableHead>}
-            <TableHead>Aduana</TableHead>
-            <TableHead>Naviera</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>ETA</TableHead>
-            <TableHead>Actualizada</TableHead>
+            <TableHead><SortHeader col="referencia">Referencia</SortHeader></TableHead>
+            {mostrarEmpresa && <TableHead><SortHeader col="empresa">Empresa</SortHeader></TableHead>}
+            <TableHead><SortHeader col="aduana">Aduana</SortHeader></TableHead>
+            <TableHead><SortHeader col="naviera">Naviera</SortHeader></TableHead>
+            <TableHead><SortHeader col="estado">Estado</SortHeader></TableHead>
+            <TableHead><SortHeader col="eta">ETA</SortHeader></TableHead>
+            <TableHead><SortHeader col="actualizada">Actualizada</SortHeader></TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
