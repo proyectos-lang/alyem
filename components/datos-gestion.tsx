@@ -1,8 +1,20 @@
-import { fecha, moneda } from "@/lib/format"
+import { fecha, fechaHora } from "@/lib/format"
 import type { GestionConEstado } from "@/lib/data/gestiones"
 
 const TIPO_OP = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" }
-const MODO = { maritimo: "Marítimo", aereo: "Aéreo", terrestre: "Terrestre" }
+const FORMA_PAGO: Record<string, string> = {
+  transferencia_pagada: "Transferencia pagada",
+  transferencia_pendiente: "Transferencia pendiente",
+  tarjeta_credito: "Tarjeta de crédito",
+  otros: "Otros",
+}
+
+function num(v: number | null) {
+  return v == null ? "—" : v.toLocaleString("es-HN")
+}
+function tri(v: boolean | null) {
+  return v === true ? "Sí" : v === false ? "No" : "—"
+}
 
 function Dato({ label, valor }: { label: string; valor: React.ReactNode }) {
   return (
@@ -17,30 +29,37 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
   return (
     <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
       <dl>
-        <Dato label="Referencia interna" valor={g.referencia} />
-        <Dato label="Referencia del cliente (PO)" valor={g.referencia_cliente} />
-        <Dato label="Consignatario" valor={g.consignatario} />
+        <Dato label="Referencia" valor={g.referencia} />
         <Dato label="Tipo de operación" valor={TIPO_OP[g.tipo_operacion]} />
-        <Dato label="Modo" valor={MODO[g.modo]} />
-        <Dato label="Proveedor" valor={g.proveedor} />
-      </dl>
-      <dl>
-        <Dato label="BL / Guía / Carta de porte" valor={g.bl} />
-        <Dato label="Naviera / línea" valor={g.naviera} />
-        <Dato label="Buque y viaje" valor={g.buque_viaje} />
-        <Dato label="Contenedor(es)" valor={g.contenedores} />
-        <Dato label="Tipo de contenedor" valor={g.tipo_contenedor} />
-        <Dato label="Mercancía" valor={g.descripcion_mercancia} />
-      </dl>
-      <dl>
-        <Dato label="Puerto de origen" valor={g.puerto_origen} />
-        <Dato label="Puerto de destino" valor={g.puerto_destino} />
-        <Dato label="Valor CIF" valor={g.valor_cif != null ? moneda(g.valor_cif) : null} />
-        <Dato label="Peso" valor={g.peso_kg != null ? `${g.peso_kg.toLocaleString("es-HN")} kg` : null} />
+        <Dato label="Aduana de ingreso" valor={g.aduana ? `${g.aduana.nombre} (${g.aduana.codigo})` : null} />
+        <Dato label="Naviera" valor={g.naviera} />
         <Dato label="ETA" valor={fecha(g.eta)} />
-        <Dato label="Arribo real" valor={fecha(g.fecha_arribo)} />
-        <Dato label="Liberación" valor={fecha(g.fecha_liberacion)} />
-        <Dato label="Entrega" valor={fecha(g.fecha_entrega)} />
+        <Dato label="Proveedor" valor={g.proveedor} />
+        <Dato label="Número de factura" valor={g.numero_factura} />
+        <Dato label="Contenedor(es)" valor={g.contenedores} />
+        <Dato label="Proviene de Panamá" valor={g.proviene_panama ? "Sí" : "No"} />
+      </dl>
+      <dl>
+        <Dato label="Descripción de la carga" valor={g.descripcion_carga} />
+        <Dato label="Origen de la carga" valor={g.origen_carga} />
+        <Dato label="Marca" valor={g.marca} />
+        <Dato label="Modelo" valor={g.modelo} />
+        <Dato label="Término de compra" valor={g.termino_compra} />
+        <Dato label="Forma de pago" valor={g.forma_pago ? FORMA_PAGO[g.forma_pago] : null} />
+        <Dato label="Valor FOB" valor={num(g.valor_fob)} />
+        <Dato label="Flete" valor={num(g.valor_flete)} />
+        <Dato label="Seguro" valor={num(g.valor_seguro)} />
+      </dl>
+      <dl>
+        <Dato label="N.º de NP (ENP)" valor={g.numero_np} />
+        <Dato label="Aforo / Digital / Previa" valor={`${tri(g.aforo)} / ${tri(g.digital)} / ${tri(g.previa)}`} />
+        <Dato label="Correlativo de liquidación" valor={g.correlativo_liquidacion} />
+        <Dato label="Boletín enviado / pagado" valor={`${tri(g.boletin_enviado)} / ${tri(g.boletin_pagado)}`} />
+        <Dato label="Canal selectivo" valor={g.canal_selectivo} />
+        <Dato label="Despacho" valor={fechaHora(g.fecha_hora_despacho)} />
+        <Dato label="Gatepass entregado" valor={tri(g.gatepass_entregado)} />
+        <Dato label="Factura del servicio" valor={g.estado_factura === "enviada" ? "Enviada" : g.estado_factura === "en_proceso" ? "En proceso" : null} />
+        <Dato label="Recibido por el cliente" valor={g.recibido ? "Sí" : "No"} />
       </dl>
     </div>
   )

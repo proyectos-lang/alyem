@@ -2,16 +2,15 @@ import type { LucideIcon } from "lucide-react"
 import {
   LayoutDashboard,
   Boxes,
-  FileText,
   Inbox,
   KanbanSquare,
-  TriangleAlert,
   Building2,
   Users,
   Tags,
   Settings,
   BarChart3,
   Star,
+  Landmark,
 } from "lucide-react"
 import type { Rol } from "./types"
 import { PERMISOS, type ClavePermiso } from "./permisos"
@@ -32,8 +31,7 @@ const CLIENTE: NavGroup[] = [
   {
     items: [
       { href: "/panel", label: "Panel", icon: LayoutDashboard },
-      { href: "/panel/gestiones", label: "Mis gestiones", icon: Boxes },
-      { href: "/panel/cotizaciones", label: "Cotizaciones", icon: FileText, permiso: PERMISOS.COTIZACION_CREAR },
+      { href: "/panel/gestiones", label: "Mis operaciones", icon: Boxes },
       { href: "/panel/reportes", label: "Reportes", icon: BarChart3, permiso: PERMISOS.REPORTES_VER },
     ],
   },
@@ -44,9 +42,7 @@ const AGENCIA_OPERACION: NavGroup = {
   items: [
     { href: "/agencia", label: "Bandeja", icon: Inbox },
     { href: "/agencia/kanban", label: "Tablero", icon: KanbanSquare, permiso: PERMISOS.GESTION_VER_TODAS },
-    { href: "/agencia/excepciones", label: "Excepciones", icon: TriangleAlert, permiso: PERMISOS.GESTION_VER_TODAS },
-    { href: "/agencia/gestiones", label: "Gestiones", icon: Boxes, permiso: PERMISOS.GESTION_VER_TODAS },
-    { href: "/agencia/cotizaciones", label: "Cotizaciones", icon: FileText, permiso: PERMISOS.COTIZACION_RESPONDER },
+    { href: "/agencia/gestiones", label: "Operaciones", icon: Boxes, permiso: PERMISOS.GESTION_VER_TODAS },
   ],
 }
 
@@ -56,6 +52,7 @@ const ADMINISTRACION: NavGroup = {
     { href: "/admin", label: "Resumen", icon: LayoutDashboard },
     { href: "/admin/empresas", label: "Empresas", icon: Building2, permiso: PERMISOS.ADMIN_EMPRESAS },
     { href: "/admin/usuarios", label: "Usuarios y permisos", icon: Users, permiso: PERMISOS.ADMIN_USUARIOS },
+    { href: "/admin/aduanas", label: "Aduanas", icon: Landmark, permiso: PERMISOS.ADMIN_CATALOGOS },
     { href: "/admin/catalogos/estados", label: "Catálogos", icon: Tags, permiso: PERMISOS.ADMIN_CATALOGOS },
     { href: "/admin/config", label: "Configuración", icon: Settings, permiso: PERMISOS.ADMIN_CONFIG },
     { href: "/admin/reportes", label: "Reportes", icon: BarChart3, permiso: PERMISOS.REPORTES_VER },

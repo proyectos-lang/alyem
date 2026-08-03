@@ -7,16 +7,45 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { crearGestion } from "@/lib/actions/gestiones"
-import type { Empresa } from "@/lib/types"
+import type { Aduana, Empresa, TipoDocumento } from "@/lib/types"
 
-// Si se pasan `empresas`, el formulario es el de la agencia creando a nombre de
-// un cliente (muestra el selector de empresa). Si no, es el del propio cliente.
-export function NuevaGestionForm({ empresas }: { empresas?: Empresa[] }) {
+const BASE = [
+  "Documento de transporte",
+  "Factura comercial",
+  "Traducción / descripción de la carga",
+  "Póliza de seguro",
+  "Comprobante de pago al proveedor",
+]
+const PERMISOS = [
+  "Permiso ARSA",
+  "Certificado de origen (TLC)",
+  "Permiso fitosanitario",
+  "Permiso SEN",
+  "Permiso UTOH",
+  "Orden de inspección",
+  "Ficha técnica",
+]
+
+// Intake del Paso 1. Si viene `empresas`, es la agencia registrando a nombre de un cliente.
+export function NuevaGestionForm({
+  aduanas,
+  tipos,
+  empresas,
+}: {
+  aduanas: Aduana[]
+  tipos: TipoDocumento[]
+  empresas?: Empresa[]
+}) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [panama, setPanama] = useState(false)
+
+  const base = tipos.filter((t) => BASE.includes(t.nombre))
+  const permisos = tipos.filter((t) => PERMISOS.includes(t.nombre))
+  const panamaDocs = tipos.filter((t) => t.nombre.includes("Panamá"))
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -32,26 +61,29 @@ export function NuevaGestionForm({ empresas }: { empresas?: Empresa[] }) {
     })
   }
 
+  const docInput = (t: TipoDocumento) => (
+    <div key={t.id} className="flex flex-col gap-1.5">
+      <Label className="text-xs">{t.nombre}</Label>
+      <Input name={`archivo_${t.id}`} type="file" accept="application/pdf,image/*" className="text-xs" />
+    </div>
+  )
+
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <Card>
-        <CardContent className="grid grid-cols-1 gap-4 pt-5 sm:grid-cols-2">
+        <CardHeader>
+          <CardTitle>Información del embarque</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {empresas && (
             <div className="flex flex-col gap-1.5 sm:col-span-2">
               <Label>Empresa cliente</Label>
               <Select name="empresa_id" defaultValue="" required>
-                <option value="" disabled>
-                  Selecciona la empresa…
-                </option>
+                <option value="" disabled>Selecciona la empresa…</option>
                 {empresas.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.nombre}
-                  </option>
+                  <option key={e.id} value={e.id}>{e.nombre}</option>
                 ))}
               </Select>
-              <p className="text-xs text-muted-foreground">
-                La gestión se registra a nombre de este cliente y queda aceptada y asignada a ti.
-              </p>
             </div>
           )}
           <div className="flex flex-col gap-1.5">
@@ -59,70 +91,79 @@ export function NuevaGestionForm({ empresas }: { empresas?: Empresa[] }) {
             <Select name="tipo_operacion" defaultValue="importacion">
               <option value="importacion">Importación</option>
               <option value="exportacion">Exportación</option>
-              <option value="transito">Tránsito</option>
+              <option value="transito">Tránsito (DUCA T)</option>
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>Modo de transporte</Label>
-            <Select name="modo" defaultValue="maritimo">
-              <option value="maritimo">Marítimo</option>
-              <option value="aereo">Aéreo</option>
-              <option value="terrestre">Terrestre</option>
+            <Label>Aduana de ingreso</Label>
+            <Select name="aduana_id" defaultValue="">
+              <option value="">Selecciona…</option>
+              {aduanas.map((a) => (
+                <option key={a.id} value={a.id}>{a.nombre} ({a.codigo})</option>
+              ))}
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>Tu referencia (PO / orden de compra)</Label>
-            <Input name="referencia_cliente" placeholder="PO-1234" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>BL / Guía aérea / Carta de porte</Label>
-            <Input name="bl" placeholder="MAEU-000000" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Naviera / línea</Label>
+            <Label>Naviera</Label>
             <Input name="naviera" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>Contenedor(es)</Label>
-            <Input name="contenedores" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Puerto de origen</Label>
-            <Input name="puerto_origen" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Puerto de destino</Label>
-            <Input name="puerto_destino" />
+            <Label>ETA (fecha estimada de llegada)</Label>
+            <Input name="eta" type="date" />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Proveedor</Label>
             <Input name="proveedor" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>ETA (fecha estimada de arribo)</Label>
-            <Input name="eta" type="date" />
+            <Label>Número de factura</Label>
+            <Input name="numero_factura" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Contenedor(es)</Label>
+            <Input name="contenedores" />
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label>Descripción de la mercancía</Label>
-            <Textarea name="descripcion_mercancia" rows={3} />
+            <Label>Descripción de la carga</Label>
+            <Textarea name="descripcion_carga" rows={2} />
           </div>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" name="proviene_panama" checked={panama} onChange={(e) => setPanama(e.target.checked)} className="size-4 accent-[var(--primary)]" />
+            La carga proviene de Panamá (requiere documentos adicionales)
+          </label>
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        {empresas
-          ? "Completa lo que tengas del embarque; los datos faltantes se pueden editar después desde el detalle de la operación."
-          : "Completa lo que tengas disponible. La agencia validará y completará los datos faltantes al aceptar la gestión."}
-      </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Documentos base</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">{base.map(docInput)}</CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Permisos y certificados (según la mercancía)</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">{permisos.map(docInput)}</CardContent>
+      </Card>
+
+      {panama && panamaDocs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Documentos de Panamá</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">{panamaDocs.map(docInput)}</CardContent>
+        </Card>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Adjunta lo que tengas disponible; podrás completar documentos después desde el detalle de la operación.
+      </p>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => router.back()}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Creando…" : "Crear solicitud"}
-        </Button>
+        <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
+        <Button type="submit" disabled={pending}>{pending ? "Creando…" : "Crear operación"}</Button>
       </div>
     </form>
   )

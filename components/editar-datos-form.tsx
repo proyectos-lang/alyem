@@ -9,13 +9,10 @@ import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useModalClose } from "@/components/ui/modal"
 import { editarDatosGestion } from "@/lib/actions/gestiones"
-import type { Gestion } from "@/lib/types"
+import type { Aduana, Gestion } from "@/lib/types"
 
-function iso(d: string | null) {
-  return d ? d.slice(0, 10) : ""
-}
-
-export function EditarDatosForm({ g }: { g: Gestion }) {
+// Edición de los datos de cabecera de la operación (Paso 1).
+export function EditarDatosForm({ g, aduanas }: { g: Gestion; aduanas: Aduana[] }) {
   const router = useRouter()
   const close = useModalClose()
   const [pending, startTransition] = useTransition()
@@ -37,79 +34,58 @@ export function EditarDatosForm({ g }: { g: Gestion }) {
     })
   }
 
-  const T = (name: keyof Gestion, label: string) => (
-    <div className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
-      <Input name={name} defaultValue={(g[name] as string) ?? ""} />
-    </div>
-  )
-  const D = (name: keyof Gestion, label: string) => (
-    <div className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
-      <Input name={name} type="date" defaultValue={iso(g[name] as string)} />
-    </div>
-  )
-
   return (
     <form onSubmit={onSubmit} className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {T("referencia_cliente", "Referencia del cliente")}
-        {T("consignatario", "Consignatario")}
         <div className="flex flex-col gap-1.5">
           <Label>Tipo de operación</Label>
           <Select name="tipo_operacion" defaultValue={g.tipo_operacion}>
             <option value="importacion">Importación</option>
             <option value="exportacion">Exportación</option>
-            <option value="transito">Tránsito</option>
+            <option value="transito">Tránsito (DUCA T)</option>
           </Select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Modo</Label>
-          <Select name="modo" defaultValue={g.modo}>
-            <option value="maritimo">Marítimo</option>
-            <option value="aereo">Aéreo</option>
-            <option value="terrestre">Terrestre</option>
+          <Label>Aduana de ingreso</Label>
+          <Select name="aduana_id" defaultValue={g.aduana_id ?? ""}>
+            <option value="">—</option>
+            {aduanas.map((a) => (
+              <option key={a.id} value={a.id}>{a.nombre} ({a.codigo})</option>
+            ))}
           </Select>
         </div>
-        {T("bl", "BL / Guía / Carta de porte")}
-        {T("naviera", "Naviera / línea")}
-        {T("buque_viaje", "Buque y viaje")}
-        {T("contenedores", "Contenedor(es)")}
-        {T("tipo_contenedor", "Tipo de contenedor")}
-        {T("proveedor", "Proveedor")}
-        {T("puerto_origen", "Puerto de origen")}
-        {T("puerto_destino", "Puerto de destino")}
-        {D("eta", "ETA")}
-        {D("fecha_arribo", "Arribo real")}
-        {D("fecha_liberacion", "Liberación")}
-        {D("fecha_entrega", "Entrega")}
-        {D("fecha_inicio_libres", "Inicio de días libres")}
         <div className="flex flex-col gap-1.5">
-          <Label>Días libres</Label>
-          <Input name="dias_libres" type="number" defaultValue={g.dias_libres ?? ""} />
+          <Label>Naviera</Label>
+          <Input name="naviera" defaultValue={g.naviera ?? ""} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Unidades importadas (para landed cost)</Label>
-          <Input name="unidades_importadas" type="number" step="any" defaultValue={g.unidades_importadas ?? ""} />
+          <Label>ETA</Label>
+          <Input name="eta" type="date" defaultValue={g.eta ? g.eta.slice(0, 10) : ""} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Valor CIF (L)</Label>
-          <Input name="valor_cif" type="number" step="any" defaultValue={g.valor_cif ?? ""} />
+          <Label>Proveedor</Label>
+          <Input name="proveedor" defaultValue={g.proveedor ?? ""} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Peso (kg)</Label>
-          <Input name="peso_kg" type="number" step="any" defaultValue={g.peso_kg ?? ""} />
+          <Label>Número de factura</Label>
+          <Input name="numero_factura" defaultValue={g.numero_factura ?? ""} />
         </div>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label>Descripción de la mercancía</Label>
-        <Textarea name="descripcion_mercancia" rows={2} defaultValue={g.descripcion_mercancia ?? ""} />
+        <div className="flex flex-col gap-1.5">
+          <Label>Contenedor(es)</Label>
+          <Input name="contenedores" defaultValue={g.contenedores ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Consignatario</Label>
+          <Input name="consignatario" defaultValue={g.consignatario ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <Label>Descripción de la carga</Label>
+          <Textarea name="descripcion_carga" rows={2} defaultValue={g.descripcion_carga ?? ""} />
+        </div>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Guardando…" : "Guardar cambios"}
-        </Button>
+      <div className="flex justify-end">
+        <Button type="submit" disabled={pending}>{pending ? "Guardando…" : "Guardar cambios"}</Button>
       </div>
     </form>
   )

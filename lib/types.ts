@@ -2,16 +2,13 @@
 
 export type Rol = "cliente" | "operador" | "admin"
 export type TipoOperacion = "importacion" | "exportacion" | "transito"
-export type ModoTransporte = "maritimo" | "aereo" | "terrestre"
 export type TipoEstado = "normal" | "pausa" | "cancelada" | "final"
 export type TipoEvento = "estado" | "observacion"
 export type CanalSelectividad = "verde" | "amarillo" | "rojo"
 export type EstadoDocumento = "pendiente" | "aceptado" | "rechazado"
-export type ContextoAdjunto = "gestion" | "evento" | "liquidacion" | "pago" | "mensaje"
-export type EstadoLiquidacion = "estimada" | "borrador" | "emitida" | "pagada" | "anulada"
-export type DestinatarioCobro = "institucion" | "agencia"
-export type EstadoPago = "reportado" | "verificado" | "rechazado"
-export type EstadoCotizacion = "solicitada" | "respondida" | "aprobada" | "rechazada"
+export type ContextoAdjunto = "gestion" | "evento" | "mensaje"
+export type FormaPago = "transferencia_pagada" | "transferencia_pendiente" | "tarjeta_credito" | "otros"
+export type EstadoFactura = "en_proceso" | "enviada"
 
 export interface Empresa {
   id: string
@@ -52,21 +49,12 @@ export interface TipoDocumento {
   activo: boolean
 }
 
-export interface ConceptoCobro {
+export interface Aduana {
   id: string
   nombre: string
-  categoria: string | null
+  codigo: string
   activo: boolean
-}
-
-export interface CuentaBancaria {
-  id: string
-  banco: string
-  numero: string
-  titular: string
-  moneda: string
-  instrucciones: string | null
-  activo: boolean
+  created_at: string
 }
 
 export interface Gestion {
@@ -74,33 +62,85 @@ export interface Gestion {
   referencia: string
   empresa_id: string
   operador_id: string | null
-  referencia_cliente: string | null
-  consignatario: string | null
   tipo_operacion: TipoOperacion
-  modo: ModoTransporte
-  bl: string | null
-  naviera: string | null
-  buque_viaje: string | null
+  consignatario: string | null
   contenedores: string | null
-  tipo_contenedor: string | null
-  puerto_origen: string | null
-  puerto_destino: string | null
-  descripcion_mercancia: string | null
-  proveedor: string | null
-  eta: string | null
-  fecha_solicitud: string
-  fecha_arribo: string | null
-  fecha_liberacion: string | null
-  fecha_entrega: string | null
-  dias_libres: number | null
-  fecha_inicio_libres: string | null
-  unidades_importadas: number | null
-  valor_cif: number | null
-  peso_kg: number | null
   public_token: string
+  fecha_solicitud: string
+
+  // Paso 1 — Notificación del embarque (cliente)
+  naviera: string | null
+  eta: string | null
+  aduana_id: string | null
+  proveedor: string | null
+  numero_factura: string | null
+  proviene_panama: boolean
+
+  // Paso 2 — Revisión y registro de datos (Alyem)
+  valor_fob: number | null
+  valor_flete: number | null
+  valor_seguro: number | null
+  otros_gastos: number | null
+  termino_compra: string | null
+  descripcion_carga: string | null
+  origen_carga: string | null
+  marca: string | null
+  modelo: string | null
+  forma_pago: FormaPago | null
+  forma_pago_otro: string | null
+  razon_social: string | null
+  rtn: string | null
+  kilos: number | null
+  bultos: number | null
+  numeros_factura: string | null
+  carta_porte: string | null
+
+  // Paso 3 — Documentos faltantes / ENP
+  numero_np: string | null
+
+  // Paso 4 — Envío a aforo y digital
+  aforo: boolean | null
+  digital: boolean | null
+  previa: boolean | null
+
+  // Paso 5 — Gestión con la naviera
+  naviera_aplica: boolean | null
+  manifiesto_presentado: boolean | null
+  liberacion: boolean | null
+  doc_transporte_original: boolean | null
+  tiempo_libre_dias: number | null
+  fecha_fin_dias_libres: string | null
+  naviera_observaciones: string | null
+
+  // Paso 6 — Liquidación de la declaración
+  correlativo_liquidacion: string | null
+
+  // Paso 7 / 8 — Boletín
+  boletin_enviado: boolean | null
+  boletin_pagado: boolean | null
+
+  // Paso 9 — Selectivo
+  canal_selectivo: CanalSelectividad | null
+
+  // Paso 10 — Levante
+  fecha_hora_despacho: string | null
+
+  // Paso 11 — Gatepass
+  gatepass_aplica: boolean | null
+  transporte_naviera: boolean | null
+  gatepass_entregado: boolean | null
+  gatepass_observacion: string | null
+
+  // Paso 12 — Facturación
+  estado_factura: EstadoFactura | null
+
+  // Paso 13 — Cierre
+  recibido: boolean
+
   created_at: string
   empresa?: Pick<Empresa, "id" | "nombre"> | null
   operador?: Pick<Usuario, "id" | "nombre"> | null
+  aduana?: Pick<Aduana, "id" | "nombre" | "codigo"> | null
 }
 
 export interface Evento {
@@ -145,54 +185,6 @@ export interface DocumentoRequerido {
   tipo?: TipoDocumento | null
 }
 
-export interface Liquidacion {
-  id: string
-  gestion_id: string
-  estado: EstadoLiquidacion
-  motivo_anulacion: string | null
-  created_at: string
-  lineas?: LiquidacionLinea[]
-}
-
-export interface LiquidacionLinea {
-  id: string
-  liquidacion_id: string
-  concepto_id: string | null
-  descripcion: string | null
-  monto: number
-  moneda: string
-  destinatario: DestinatarioCobro
-  anulada: boolean
-  motivo_anulacion: string | null
-  created_at: string
-  concepto?: ConceptoCobro | null
-}
-
-export interface Pago {
-  id: string
-  gestion_id: string
-  liquidacion_id: string | null
-  monto: number
-  moneda: string
-  fecha_pago: string | null
-  banco_medio: string | null
-  referencia: string | null
-  comprobante_path: string | null
-  estado: EstadoPago
-  motivo_rechazo: string | null
-  reportado_por: string | null
-  verificado_por: string | null
-  created_at: string
-  aplicaciones?: PagoAplicacion[]
-}
-
-export interface PagoAplicacion {
-  id: string
-  pago_id: string
-  linea_id: string
-  monto_aplicado: number
-}
-
 export interface Notificacion {
   id: string
   usuario_id: string
@@ -214,27 +206,6 @@ export interface Mensaje {
   usuario?: Pick<Usuario, "id" | "nombre" | "rol"> | null
 }
 
-export interface Cotizacion {
-  id: string
-  empresa_id: string | null
-  prospecto_nombre: string | null
-  prospecto_email: string | null
-  descripcion: string | null
-  estado: EstadoCotizacion
-  gestion_id: string | null
-  created_at: string
-  empresa?: Pick<Empresa, "id" | "nombre"> | null
-  lineas?: CotizacionLinea[]
-}
-
-export interface CotizacionLinea {
-  id: string
-  cotizacion_id: string
-  concepto: string | null
-  monto: number
-  moneda: string
-}
-
 export interface Calificacion {
   id: string
   gestion_id: string
@@ -246,14 +217,4 @@ export interface Calificacion {
   dim_cobros: number | null
   comentario: string | null
   created_at: string
-}
-
-// Saldo derivado de una liquidación (vista v_saldos_liquidacion + cálculo).
-export interface SaldoLiquidacion {
-  liquidacion_id: string
-  gestion_id: string
-  total: number
-  pagado_verificado: number
-  reportado_pendiente: number
-  saldo: number
 }

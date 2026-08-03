@@ -25,7 +25,7 @@ export function RegistrarEventoForm({
   const [tipo, setTipo] = useState<"estado" | "observacion">("estado")
   const [estadoId, setEstadoId] = useState(estados[0]?.id ?? "")
 
-  const esSelectividad = estados.find((e) => e.id === estadoId)?.nombre === "Selectividad"
+  const esSelectividad = estados.find((e) => e.id === estadoId)?.nombre === "Selectivo"
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

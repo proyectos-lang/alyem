@@ -1,4 +1,4 @@
-import { Boxes, CreditCard, Star, TriangleAlert } from "lucide-react"
+import { Boxes, FileCheck, Star, TriangleAlert } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic"
 
 export default async function AdminResumen() {
   const sb = getSupabase()
-  const [gestTotal, gestActivas, pagosPend, califs, empresas] = await Promise.all([
+  const [gestTotal, gestActivas, docsPend, califs, empresas] = await Promise.all([
     sb.from("gestiones").select("id", { count: "exact", head: true }),
     sb
       .from("v_gestion_estado_actual")
       .select("gestion_id, estado_tipo", { count: "exact", head: true })
       .neq("estado_tipo", "final"),
-    sb.from("pagos").select("id", { count: "exact", head: true }).eq("estado", "reportado"),
+    sb.from("documentos").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
     sb.from("calificaciones").select("estrellas"),
     sb.from("empresas").select("id", { count: "exact", head: true }),
   ])
@@ -30,13 +30,13 @@ export default async function AdminResumen() {
       <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6">
         <PageHeader titulo="Resumen del negocio" descripcion="Visión global de la operación de la agencia." />
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Gestiones totales" value={gestTotal.count ?? 0} icon={Boxes} />
-          <StatCard label="Gestiones activas" value={gestActivas.count ?? 0} icon={Boxes} tone="success" />
+          <StatCard label="Operaciones totales" value={gestTotal.count ?? 0} icon={Boxes} />
+          <StatCard label="Operaciones activas" value={gestActivas.count ?? 0} icon={Boxes} tone="success" />
           <StatCard
-            label="Pagos por verificar"
-            value={pagosPend.count ?? 0}
-            icon={CreditCard}
-            tone={pagosPend.count ? "warning" : "default"}
+            label="Documentos por revisar"
+            value={docsPend.count ?? 0}
+            icon={FileCheck}
+            tone={docsPend.count ? "warning" : "default"}
           />
           <StatCard
             label="Satisfacción promedio"

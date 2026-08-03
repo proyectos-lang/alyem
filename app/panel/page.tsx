@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Boxes, FileWarning, CreditCard, Bell, Plus } from "lucide-react"
+import { Boxes, FileWarning, CheckCircle2, Bell, Plus } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
@@ -10,7 +10,6 @@ import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
 import { getSupabase } from "@/lib/supabase/server"
-import { moneda } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
 
@@ -21,9 +20,9 @@ export default async function PanelCliente({ searchParams }: { searchParams: Pro
 
   const gestiones = await listarGestiones(usuario, { texto: q })
   const activas = gestiones.filter((g) => g.estado?.tipo !== "final" && g.estado?.tipo !== "cancelada")
+  const cerradas = gestiones.filter((g) => g.estado?.tipo === "final")
 
   const sb = getSupabase()
-  const ids = gestiones.map((g) => g.id)
 
   // Documentos pendientes de subir.
   let docsPendientes = 0
@@ -34,17 +33,6 @@ export default async function PanelCliente({ searchParams }: { searchParams: Pro
       .eq("cumplido", false)
       .eq("gestion.empresa_id", usuario.empresa_id)
     docsPendientes = count ?? 0
-  }
-
-  // Monto pendiente de pago (liquidaciones emitidas con saldo).
-  let pagosPendientes = 0
-  if (ids.length) {
-    const { data: liqs } = await sb.from("liquidaciones").select("id").in("gestion_id", ids).eq("estado", "emitida")
-    const liqIds = (liqs as { id: string }[])?.map((l) => l.id) ?? []
-    if (liqIds.length) {
-      const { data: saldos } = await sb.from("v_saldos_liquidacion").select("*").in("liquidacion_id", liqIds)
-      for (const s of (saldos as any[]) ?? []) pagosPendientes += Number(s.total) - Number(s.pagado_verificado)
-    }
   }
 
   const { count: novedades } = await sb
@@ -62,26 +50,21 @@ export default async function PanelCliente({ searchParams }: { searchParams: Pro
           acciones={
             <Link href="/panel/gestiones/nueva">
               <Button>
-                <Plus /> Nueva gestión
+                <Plus /> Nueva operación
               </Button>
             </Link>
           }
         />
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Gestiones activas" value={activas.length} icon={Boxes} />
+          <StatCard label="Operaciones activas" value={activas.length} icon={Boxes} />
           <StatCard
             label="Documentos pendientes"
             value={docsPendientes}
             icon={FileWarning}
             tone={docsPendientes ? "warning" : "default"}
           />
-          <StatCard
-            label="Pagos pendientes"
-            value={moneda(pagosPendientes)}
-            icon={CreditCard}
-            tone={pagosPendientes > 0 ? "warning" : "default"}
-          />
+          <StatCard label="Operaciones cerradas" value={cerradas.length} icon={CheckCircle2} tone="success" />
           <StatCard
             label="Novedades sin leer"
             value={novedades ?? 0}
@@ -92,7 +75,7 @@ export default async function PanelCliente({ searchParams }: { searchParams: Pro
 
         <div className="mt-8 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold">Mis gestiones</h2>
+            <h2 className="text-sm font-semibold">Mis operaciones</h2>
             <Buscador />
           </div>
           <GestionesTabla gestiones={gestiones} />

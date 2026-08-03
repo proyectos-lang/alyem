@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { Ship, Plane, Truck } from "lucide-react"
+import { Ship } from "lucide-react"
 import { Timeline } from "@/components/timeline"
 import { EstadoChip } from "@/components/estado-chip"
 import { getSupabase } from "@/lib/supabase/server"
@@ -10,14 +10,18 @@ import type { Evento, Gestion } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
-const MODO_ICON = { maritimo: Ship, aereo: Plane, terrestre: Truck } as const
+const TIPO = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" } as const
 
-// Enlace público de seguimiento: SOLO timeline, sin montos ni documentos, sin login.
+// Enlace público de seguimiento: SOLO timeline, sin datos internos, sin login.
 export default async function TrackPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const sb = getSupabase()
 
-  const { data: g } = await sb.from("gestiones").select("*").eq("public_token", token).maybeSingle()
+  const { data: g } = await sb
+    .from("gestiones")
+    .select("*, aduana:aduanas(nombre, codigo)")
+    .eq("public_token", token)
+    .maybeSingle()
   if (!g) notFound()
   const gestion = g as Gestion
 
@@ -33,7 +37,6 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
   ])
   const eventos = (ev as Evento[]) ?? []
   const estado = estados.get(gestion.id)
-  const ModoIcon = MODO_ICON[gestion.modo]
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -53,18 +56,13 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
             <EstadoChip nombre={estado?.nombre} color={estado?.color} />
           </div>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <ModoIcon className="size-3.5" /> {gestion.tipo_operacion}
-            </span>
-            {gestion.puerto_origen && gestion.puerto_destino && (
-              <span>
-                {gestion.puerto_origen} → {gestion.puerto_destino}
-              </span>
-            )}
+            <span>{TIPO[gestion.tipo_operacion]}</span>
+            {gestion.aduana && <span>{gestion.aduana.nombre}</span>}
+            {gestion.naviera && <span>{gestion.naviera}</span>}
             <span>ETA {fecha(gestion.eta)}</span>
           </p>
-          {gestion.descripcion_mercancia && (
-            <p className="mt-2 text-sm text-foreground">{gestion.descripcion_mercancia}</p>
+          {gestion.descripcion_carga && (
+            <p className="mt-2 text-sm text-foreground">{gestion.descripcion_carga}</p>
           )}
         </div>
 

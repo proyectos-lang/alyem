@@ -1,16 +1,24 @@
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { NuevaGestionForm } from "@/components/nueva-gestion-form"
+import { SetupNotice } from "@/components/setup-notice"
+import { usuarioActivoSeguro } from "@/lib/portal"
+import { listarAduanas } from "@/lib/data/aduanas"
+import { getTiposDocumento } from "@/lib/data/catalogos"
 
 export const dynamic = "force-dynamic"
 
-export default function NuevaGestionPage() {
+export default async function NuevaGestionPage() {
+  const usuario = await usuarioActivoSeguro()
+  if (!usuario) return <SetupNotice mensaje="Configura Supabase para crear operaciones." />
+  const [aduanas, tipos] = await Promise.all([listarAduanas(true), getTiposDocumento()])
+
   return (
     <PortalShell roles={["cliente"]}>
       <div className="mx-auto max-w-3xl px-4 py-6 md:px-6">
-        <PageHeader titulo="Nueva gestión" descripcion="Crea una solicitud de trámite aduanero." />
+        <PageHeader titulo="Nueva operación" descripcion="Notifica tu embarque y adjunta la documentación (Paso 1)." />
         <div className="mt-6">
-          <NuevaGestionForm />
+          <NuevaGestionForm aduanas={aduanas} tipos={tipos} />
         </div>
       </div>
     </PortalShell>

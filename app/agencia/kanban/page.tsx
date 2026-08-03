@@ -49,7 +49,7 @@ export default async function KanbanPage() {
                     >
                       <p className="font-medium">{g.referencia}</p>
                       <p className="truncate text-xs text-muted-foreground">{g.empresa?.nombre}</p>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">{g.descripcion_mercancia}</p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">{g.descripcion_carga}</p>
                       <div className="mt-2">
                         <DiasLibresBadge gestion={g} />
                       </div>

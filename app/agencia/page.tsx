@@ -23,14 +23,14 @@ export default async function BandejaAgencia({ searchParams }: { searchParams: P
   const { q } = await searchParams
 
   const gestiones = await listarGestiones(usuario, { texto: q })
-  const solicitudes = gestiones.filter((g) => g.estado?.nombre === "Solicitada")
+  const solicitudes = gestiones.filter((g) => g.estado?.nombre === "Notificación del embarque")
   const activas = gestiones.filter((g) => g.estado?.tipo !== "final" && g.estado?.tipo !== "cancelada")
 
   const sb = getSupabase()
-  const [{ count: pagosPorVerificar }, { count: docsPorRevisar }] = await Promise.all([
-    sb.from("pagos").select("id", { count: "exact", head: true }).eq("estado", "reportado"),
-    sb.from("documentos").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
-  ])
+  const { count: docsPorRevisar } = await sb
+    .from("documentos")
+    .select("id", { count: "exact", head: true })
+    .eq("estado", "pendiente")
 
   return (
     <PortalShell roles={["operador", "admin"]}>
@@ -49,10 +49,9 @@ export default async function BandejaAgencia({ searchParams }: { searchParams: P
           }
         />
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Solicitudes nuevas" value={solicitudes.length} icon={Inbox} tone={solicitudes.length ? "warning" : "default"} />
-          <StatCard label="Gestiones activas" value={activas.length} icon={Boxes} tone="success" />
-          <StatCard label="Pagos por verificar" value={pagosPorVerificar ?? 0} icon={CreditCard} tone={pagosPorVerificar ? "warning" : "default"} />
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Notificaciones nuevas" value={solicitudes.length} icon={Inbox} tone={solicitudes.length ? "warning" : "default"} />
+          <StatCard label="Operaciones activas" value={activas.length} icon={Boxes} tone="success" />
           <StatCard label="Documentos por revisar" value={docsPorRevisar ?? 0} icon={FileCheck} tone={docsPorRevisar ? "warning" : "default"} />
         </div>
 
@@ -72,7 +71,7 @@ export default async function BandejaAgencia({ searchParams }: { searchParams: P
                     <p className="font-medium">
                       {g.referencia} · <span className="font-normal text-muted-foreground">{g.empresa?.nombre}</span>
                     </p>
-                    <p className="truncate text-xs text-muted-foreground">{g.descripcion_mercancia ?? "Sin descripción"}</p>
+                    <p className="truncate text-xs text-muted-foreground">{g.descripcion_carga ?? "Sin descripción"}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="hidden text-xs text-muted-foreground sm:block">ETA {fecha(g.eta)}</span>

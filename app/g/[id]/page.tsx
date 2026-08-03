@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowLeft, Pencil, Building2, Ship, Plane, Truck, Coins, Receipt, Weight, Container } from "lucide-react"
+import { ArrowLeft, Pencil, Building2, Landmark, Ship, Container, CalendarClock } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -11,35 +11,34 @@ import { DatosGestion } from "@/components/datos-gestion"
 import { GestionAcciones } from "@/components/gestion-acciones"
 import { EditarDatosForm } from "@/components/editar-datos-form"
 import { DocumentosPanel } from "@/components/documentos-panel"
-import { PagosPanel } from "@/components/pagos-panel"
 import { MensajesPanel } from "@/components/mensajes-panel"
+import { ProcesoPanel } from "@/components/proceso-panel"
 import { CalificarForm } from "@/components/calificar-form"
 import { StarDisplay } from "@/components/star-rating"
 import { DiasLibresBadge } from "@/components/dias-libres-badge"
-import { LandedCostCard } from "@/components/landed-cost-card"
+import { AvanzarEtapa } from "@/components/avanzar-etapa"
+import { MarcarRecibido } from "@/components/marcar-recibido"
 import { CopiarTrack } from "@/components/copiar-track"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { StepperTrazabilidad } from "@/components/stepper-trazabilidad"
-import { OperacionPanel } from "@/components/operacion-panel"
-import { AvanzarEtapa } from "@/components/avanzar-etapa"
 import { StatCard } from "@/components/stat-card"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import {
-  getGestion, getEventos, getEstadosCatalogo, getDocumentos, getRequeridos,
-  getLiquidaciones, getPagos, getMensajes, getCalificacion,
+  getGestion, getEventos, getEstadosCatalogo, getDocumentos, getRequeridos, getMensajes, getCalificacion,
 } from "@/lib/data/gestiones"
-import { getTiposDocumento, getConceptos, getCuentas } from "@/lib/data/catalogos"
+import { getTiposDocumento } from "@/lib/data/catalogos"
+import { listarAduanas } from "@/lib/data/aduanas"
 import { puede, esAgencia, PERMISOS } from "@/lib/permisos"
-import { fecha, moneda } from "@/lib/format"
+import { fecha } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
 
-const MODO_ICON = { maritimo: Ship, aereo: Plane, terrestre: Truck } as const
+const TIPO_LABEL = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" } as const
 
 export default async function DetalleGestion({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await usuarioActivoSeguro()
-  if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver la gestión." />
+  if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver la operación." />
   const { id } = await params
 
   const g = await getGestion(id, usuario)
@@ -47,56 +46,38 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
     return (
       <PortalShell>
         <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-muted-foreground">
-          Gestión no encontrada o no tienes acceso a ella.
+          Operación no encontrada o no tienes acceso a ella.
         </div>
       </PortalShell>
     )
   }
 
-  const [eventos, estados, documentos, requeridos, tipos, liquidaciones, pagos, cuentas, conceptos, mensajes, calificacion] =
-    await Promise.all([
-      getEventos(id, usuario),
-      getEstadosCatalogo(),
-      getDocumentos(id),
-      getRequeridos(id),
-      getTiposDocumento(),
-      getLiquidaciones(id),
-      getPagos(id),
-      getCuentas(),
-      getConceptos(),
-      getMensajes(id),
-      getCalificacion(id),
-    ])
+  const [eventos, estados, documentos, requeridos, tipos, mensajes, calificacion, aduanas] = await Promise.all([
+    getEventos(id, usuario),
+    getEstadosCatalogo(),
+    getDocumentos(id),
+    getRequeridos(id),
+    getTiposDocumento(),
+    getMensajes(id),
+    getCalificacion(id),
+    listarAduanas(true),
+  ])
   const agencia = esAgencia(usuario.rol)
   const docsPendientes = requeridos.filter((r) => !r.cumplido).length
-
-  const entregadaOCerrada = g.estado?.tipo === "final" || (g.estado?.nombre ?? "").includes("Entregada")
-  const puedeCalificar = usuario.rol === "cliente" && entregadaOCerrada && !calificacion && puede(usuario, PERMISOS.CALIFICACION_CREAR)
-
-  // Totales de cobros por moneda (para landed cost).
-  const totalesCobros: Record<string, number> = {}
-  for (const liq of liquidaciones)
-    for (const l of liq.lineas ?? []) if (!l.anulada) totalesCobros[l.moneda] = (totalesCobros[l.moneda] ?? 0) + Number(l.monto)
-  const backHref = usuario.rol === "cliente" ? "/panel/gestiones" : "/agencia/gestiones"
-  const ModoIcon = MODO_ICON[g.modo]
-
-  // Impuestos estimados: líneas de liquidación con concepto de categoría "impuesto".
-  let impuestosEst = 0
-  for (const liq of liquidaciones)
-    if (liq.estado !== "anulada")
-      for (const l of liq.lineas ?? [])
-        if (!l.anulada && l.concepto?.categoria === "impuesto") impuestosEst += Number(l.monto)
-
-  const TIPO_LABEL = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" } as const
   const esFinal = g.estado?.tipo === "final" || g.estado?.tipo === "cancelada"
-  const tabInicial = agencia ? "operacion" : "timeline"
+
+  const enCierre = (g.estado?.nombre ?? "").startsWith("Cierre") || esFinal
+  const puedeConfirmar = usuario.rol === "cliente" && !g.recibido && !!g.estado &&
+    (g.estado.nombre === "Facturación del servicio" || g.estado.nombre.startsWith("Cierre"))
+  const puedeCalificar = usuario.rol === "cliente" && (g.recibido || enCierre) && !calificacion && puede(usuario, PERMISOS.CALIFICACION_CREAR)
+
+  const backHref = usuario.rol === "cliente" ? "/panel/gestiones" : "/agencia/gestiones"
+  const tabInicial = agencia ? "proceso" : "timeline"
 
   return (
     <PortalShell>
       <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6">
-        {agencia && (
-          <Breadcrumb items={["Operaciones", TIPO_LABEL[g.tipo_operacion]]} destacado={g.referencia} />
-        )}
+        {agencia && <Breadcrumb items={["Operaciones", TIPO_LABEL[g.tipo_operacion]]} destacado={g.referencia} />}
         <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> Volver
         </Link>
@@ -117,13 +98,13 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                       <Building2 className="size-3.5" /> {g.empresa?.nombre}
                     </span>
                   )}
-                  {g.descripcion_mercancia && <span>{g.descripcion_mercancia}</span>}
-                  {g.puerto_destino && <span>{g.puerto_destino}</span>}
-                  <span className="inline-flex items-center gap-1">
-                    <ModoIcon className="size-3.5" /> {TIPO_LABEL[g.tipo_operacion]}
-                  </span>
+                  {g.aduana && (
+                    <span className="inline-flex items-center gap-1">
+                      <Landmark className="size-3.5" /> {g.aduana.nombre}
+                    </span>
+                  )}
+                  <span>{TIPO_LABEL[g.tipo_operacion]}</span>
                   <span>ETA {fecha(g.eta)}</span>
-                  {g.referencia_cliente && <span>PO: {g.referencia_cliente}</span>}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -132,15 +113,15 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                 </Link>
                 {agencia && <CopiarTrack token={g.public_token} />}
                 {agencia && puede(usuario, PERMISOS.GESTION_EDITAR) && (
-                  <Modal title="Editar datos de la carga" className="max-w-2xl" trigger={<Button variant="outline"><Pencil /> Editar datos</Button>}>
-                    <EditarDatosForm g={g} />
+                  <Modal title="Editar datos de la operación" className="max-w-2xl" trigger={<Button variant="outline"><Pencil /> Editar</Button>}>
+                    <EditarDatosForm g={g} aduanas={aduanas} />
                   </Modal>
                 )}
                 {agencia && (
                   <GestionAcciones
                     gestionId={g.id}
                     estados={estados}
-                    esSolicitada={g.estado?.nombre === "Solicitada"}
+                    esSolicitada={g.estado?.nombre === "Notificación del embarque"}
                     puedeAceptar={puede(usuario, PERMISOS.GESTION_ACEPTAR)}
                     puedeRegistrar={puede(usuario, PERMISOS.EVENTO_REGISTRAR)}
                   />
@@ -148,30 +129,23 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                 {agencia && puede(usuario, PERMISOS.EVENTO_REGISTRAR) && (
                   <AvanzarEtapa gestionId={g.id} deshabilitado={esFinal} />
                 )}
+                {puedeConfirmar && <MarcarRecibido gestionId={g.id} />}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Métricas de operación (agencia) */}
+        {/* Métricas (agencia) */}
         {agencia && (
           <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard label="Valor CIF" value={g.valor_cif != null ? moneda(g.valor_cif) : "—"} icon={Coins} />
-            <StatCard label="Impuestos est." value={moneda(impuestosEst)} icon={Receipt} tone="warning" />
-            <StatCard
-              label="Peso"
-              value={g.peso_kg != null ? `${g.peso_kg.toLocaleString("es-HN")} kg` : "—"}
-              icon={Weight}
-            />
-            <StatCard
-              label="Contenedor"
-              value={<span className="font-mono text-lg">{g.contenedores ?? "—"}</span>}
-              icon={Container}
-            />
+            <StatCard label="Aduana" value={g.aduana ? `${g.aduana.nombre}` : "—"} icon={Landmark} />
+            <StatCard label="Naviera" value={g.naviera ?? "—"} icon={Ship} />
+            <StatCard label="ETA" value={fecha(g.eta)} icon={CalendarClock} />
+            <StatCard label="Contenedor" value={<span className="font-mono text-base">{g.contenedores ?? "—"}</span>} icon={Container} />
           </div>
         )}
 
-        {/* Stepper de trazabilidad */}
+        {/* Stepper de los 13 pasos */}
         <div className="mt-4">
           <StepperTrazabilidad estados={estados} eventos={eventos} estadoActualId={g.estado?.estado_id} />
         </div>
@@ -187,9 +161,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
             <CardContent className="flex flex-wrap items-center gap-3 pt-5">
               <StarDisplay value={calificacion.estrellas} size="size-5" />
               <span className="text-sm font-medium">{calificacion.estrellas}/5</span>
-              {calificacion.comentario && (
-                <p className="text-sm text-muted-foreground">“{calificacion.comentario}”</p>
-              )}
+              {calificacion.comentario && <p className="text-sm text-muted-foreground">“{calificacion.comentario}”</p>}
             </CardContent>
           </Card>
         )}
@@ -197,30 +169,32 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
         {/* Pestañas */}
         <Tabs defaultValue={tabInicial} className="mt-6">
           <TabsList>
-            {agencia && <TabsTrigger value="operacion">Operación</TabsTrigger>}
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            {agencia && <TabsTrigger value="proceso">Proceso</TabsTrigger>}
+            <TabsTrigger value="timeline">Trazabilidad</TabsTrigger>
             <TabsTrigger value="documentos">
               Documentos{docsPendientes > 0 ? ` (${docsPendientes})` : ""}
             </TabsTrigger>
-            <TabsTrigger value="pagos">Pagos</TabsTrigger>
             <TabsTrigger value="mensajes">Mensajes</TabsTrigger>
             <TabsTrigger value="datos">Datos</TabsTrigger>
           </TabsList>
 
           {agencia && (
-            <TabsContent value="operacion">
-              <OperacionPanel g={g} eventos={eventos} documentos={documentos} />
+            <TabsContent value="proceso">
+              <ProcesoPanel
+                gestion={g}
+                estados={estados}
+                documentos={documentos}
+                aduanas={aduanas}
+                estadoActualNombre={g.estado?.nombre}
+                puedeEditar={puede(usuario, PERMISOS.GESTION_EDITAR)}
+              />
             </TabsContent>
           )}
 
           <TabsContent value="timeline">
             <Card>
-              <CardHeader>
-                <CardTitle>Historial de eventos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Timeline eventos={eventos} />
-              </CardContent>
+              <CardHeader><CardTitle>Trazabilidad de la operación</CardTitle></CardHeader>
+              <CardContent><Timeline eventos={eventos} /></CardContent>
             </Card>
           </TabsContent>
 
@@ -236,38 +210,15 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
             />
           </TabsContent>
 
-          <TabsContent value="pagos">
-            <PagosPanel
-              gestionId={g.id}
-              liquidaciones={liquidaciones}
-              pagos={pagos}
-              cuentas={cuentas}
-              conceptos={conceptos}
-              rolCliente={usuario.rol === "cliente"}
-              puedeEditar={agencia && puede(usuario, PERMISOS.LIQUIDACION_EDITAR)}
-              puedeReportar={usuario.rol === "cliente" && puede(usuario, PERMISOS.PAGO_REPORTAR)}
-              puedeVerificar={agencia && puede(usuario, PERMISOS.PAGO_VERIFICAR)}
-            />
-          </TabsContent>
-
           <TabsContent value="mensajes">
             <MensajesPanel gestionId={g.id} mensajes={mensajes} usuarioId={usuario.id} />
           </TabsContent>
 
           <TabsContent value="datos">
-            <div className="flex flex-col gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ficha de la carga</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <DatosGestion g={g} />
-                </CardContent>
-              </Card>
-              {entregadaOCerrada && (
-                <LandedCostCard gestionId={g.id} unidades={g.unidades_importadas} totales={totalesCobros} />
-              )}
-            </div>
+            <Card>
+              <CardHeader><CardTitle>Ficha de la operación</CardTitle></CardHeader>
+              <CardContent><DatosGestion g={g} /></CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

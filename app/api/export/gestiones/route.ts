@@ -17,13 +17,13 @@ export async function GET(req: Request) {
   const gestiones = await listarGestiones(usuario, { texto: q })
 
   const encabezados = [
-    "Referencia", "Empresa", "Ref. cliente", "Tipo", "Modo", "Estado",
-    "BL", "Contenedores", "Origen", "Destino", "ETA", "Mercancía",
+    "Referencia", "Empresa", "Tipo", "Estado", "Aduana", "Naviera",
+    "Contenedores", "N.º factura", "ETA", "Canal selectivo", "Descripción",
   ]
   const filas = gestiones.map((g) =>
     [
-      g.referencia, g.empresa?.nombre, g.referencia_cliente, g.tipo_operacion, g.modo,
-      g.estado?.nombre, g.bl, g.contenedores, g.puerto_origen, g.puerto_destino, g.eta, g.descripcion_mercancia,
+      g.referencia, g.empresa?.nombre, g.tipo_operacion, g.estado?.nombre, g.aduana?.nombre, g.naviera,
+      g.contenedores, g.numero_factura, g.eta, g.canal_selectivo, g.descripcion_carga,
     ].map(csvCampo).join(","),
   )
   // BOM para que Excel reconozca UTF-8.

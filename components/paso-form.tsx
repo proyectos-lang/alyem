@@ -1,0 +1,101 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useState, useTransition } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { useModalClose } from "@/components/ui/modal"
+import { editarDatosGestion } from "@/lib/actions/gestiones"
+import type { CampoPaso } from "@/lib/pasos"
+import type { Aduana, Gestion } from "@/lib/types"
+
+function iso(v: unknown) {
+  return typeof v === "string" ? v.slice(0, 10) : ""
+}
+function isoLocal(v: unknown) {
+  return typeof v === "string" ? new Date(v).toISOString().slice(0, 16) : ""
+}
+
+export function PasoForm({
+  gestion,
+  campos,
+  aduanas,
+}: {
+  gestion: Gestion
+  campos: CampoPaso[]
+  aduanas: Aduana[]
+}) {
+  const router = useRouter()
+  const close = useModalClose()
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    const fd = new FormData(e.currentTarget)
+    fd.set("id", gestion.id)
+    startTransition(async () => {
+      try {
+        await editarDatosGestion(fd)
+        close()
+        router.refresh()
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
+  }
+
+  const val = (name: string) => (gestion as Record<string, unknown>)[name]
+  const triVal = (name: string) => {
+    const v = val(name)
+    return v === true ? "si" : v === false ? "no" : ""
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {campos.map((c) => (
+          <div key={c.name} className={`flex flex-col gap-1.5 ${c.tipo === "textarea" ? "sm:col-span-2" : ""}`}>
+            <Label className="text-xs">{c.label}</Label>
+            {c.tipo === "text" && <Input name={c.name} defaultValue={(val(c.name) as string) ?? ""} />}
+            {c.tipo === "num" && <Input name={c.name} type="number" step="any" defaultValue={(val(c.name) as number) ?? ""} />}
+            {c.tipo === "date" && <Input name={c.name} type="date" defaultValue={iso(val(c.name))} />}
+            {c.tipo === "datetime" && <Input name={c.name} type="datetime-local" defaultValue={isoLocal(val(c.name))} />}
+            {c.tipo === "textarea" && <Textarea name={c.name} rows={2} defaultValue={(val(c.name) as string) ?? ""} />}
+            {c.tipo === "tristate" && (
+              <Select name={c.name} defaultValue={triVal(c.name)}>
+                <option value="">—</option>
+                <option value="si">Sí</option>
+                <option value="no">No</option>
+              </Select>
+            )}
+            {c.tipo === "select" && (
+              <Select name={c.name} defaultValue={(val(c.name) as string) ?? ""}>
+                <option value="">—</option>
+                {c.opciones?.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            )}
+            {c.tipo === "aduana" && (
+              <Select name={c.name} defaultValue={(val(c.name) as string) ?? ""}>
+                <option value="">—</option>
+                {aduanas.map((a) => (
+                  <option key={a.id} value={a.id}>{a.nombre} ({a.codigo})</option>
+                ))}
+              </Select>
+            )}
+          </div>
+        ))}
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={pending}>{pending ? "Guardando…" : "Guardar"}</Button>
+      </div>
+    </form>
+  )
+}

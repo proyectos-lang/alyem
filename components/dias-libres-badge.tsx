@@ -6,7 +6,7 @@ import { diasLibresRestantes } from "@/lib/operativa"
 export function DiasLibresBadge({
   gestion,
 }: {
-  gestion: { fecha_inicio_libres: string | null; dias_libres: number | null }
+  gestion: { fecha_fin_dias_libres: string | null }
 }) {
   const dias = diasLibresRestantes(gestion)
   if (dias == null) return null

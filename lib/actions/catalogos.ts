@@ -33,29 +33,6 @@ export async function agregarTipoDocumento(form: FormData) {
   revalidatePath("/admin/catalogos/estados")
 }
 
-export async function agregarConcepto(form: FormData) {
-  await guardCat()
-  const sb = getSupabase()
-  await sb.from("conceptos_cobro").insert({
-    nombre: String(form.get("nombre") ?? "").trim(),
-    categoria: (form.get("categoria") as string) || null,
-  })
-  revalidatePath("/admin/catalogos/estados")
-}
-
-export async function agregarCuenta(form: FormData) {
-  await guardCat()
-  const sb = getSupabase()
-  await sb.from("cuentas_bancarias").insert({
-    banco: String(form.get("banco") ?? "").trim(),
-    numero: String(form.get("numero") ?? "").trim(),
-    titular: String(form.get("titular") ?? "").trim(),
-    moneda: (form.get("moneda") as string) || "HNL",
-    instrucciones: (form.get("instrucciones") as string) || null,
-  })
-  revalidatePath("/admin/catalogos/estados")
-}
-
 export async function guardarConfig(form: FormData) {
   const u = await getUsuarioActivo()
   exigir(u, PERMISOS.ADMIN_CONFIG)

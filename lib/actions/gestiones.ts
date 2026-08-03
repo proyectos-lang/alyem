@@ -1,10 +1,10 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getSupabase } from "../supabase/server"
+import { getSupabase, ADJUNTOS_BUCKET } from "../supabase/server"
 import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
-import { notificar, notificarAgencia, notificarEmpresa } from "./notificaciones"
+import { notificarAgencia, notificarEmpresa } from "./notificaciones"
 
 async function estadoIdPorNombre(patron: string): Promise<string | null> {
   const sb = getSupabase()
@@ -25,12 +25,38 @@ async function siguienteReferencia(): Promise<string> {
     .from("gestiones")
     .select("id", { count: "exact", head: true })
     .ilike("referencia", `GES-${anio}-%`)
-  const n = (count ?? 0) + 1
-  return `GES-${anio}-${String(n).padStart(4, "0")}`
+  return `GES-${anio}-${String((count ?? 0) + 1).padStart(4, "0")}`
 }
 
-// Crea una gestión. El cliente la crea para su empresa; el personal de la agencia
-// puede crearla a nombre de una empresa cliente (queda aceptada y asignada a él).
+// Sube los archivos adjuntos de un formulario (inputs 'archivo_<tipoDocumentoId>').
+async function subirAdjuntosDeForm(form: FormData, gestionId: string, usuarioId: string, esAgencia: boolean) {
+  const sb = getSupabase()
+  for (const [key, value] of form.entries()) {
+    if (!key.startsWith("archivo_")) continue
+    const file = value as File
+    if (!file || typeof file === "string" || file.size === 0) continue
+    const tipoId = key.slice("archivo_".length)
+    const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin"
+    const path = `${gestionId}/${crypto.randomUUID()}.${ext}`
+    const { error } = await sb.storage
+      .from(ADJUNTOS_BUCKET)
+      .upload(path, Buffer.from(await file.arrayBuffer()), {
+        contentType: file.type || "application/octet-stream",
+      })
+    if (error) continue
+    await sb.from("documentos").insert({
+      gestion_id: gestionId,
+      tipo_documento_id: tipoId || null,
+      contexto: "gestion",
+      nombre_archivo: file.name,
+      storage_path: path,
+      estado: esAgencia ? "aceptado" : "pendiente",
+      subido_por: usuarioId,
+    })
+  }
+}
+
+// Paso 1 — Notificación del embarque. El cliente monta la orden (o la agencia a su nombre).
 export async function crearGestion(form: FormData): Promise<string> {
   const usuario = await getUsuarioActivo()
   exigir(usuario, PERMISOS.GESTION_CREAR)
@@ -39,9 +65,7 @@ export async function crearGestion(form: FormData): Promise<string> {
   const desdeAgencia = usuario!.rol === "operador" || usuario!.rol === "admin"
   const empresaId = desdeAgencia ? ((form.get("empresa_id") as string) || null) : usuario!.empresa_id
   if (!empresaId) {
-    throw new Error(
-      desdeAgencia ? "Selecciona la empresa cliente." : "Tu usuario no está asociado a una empresa.",
-    )
+    throw new Error(desdeAgencia ? "Selecciona la empresa cliente." : "Tu usuario no está asociado a una empresa.")
   }
 
   let consignatario = usuario!.empresa?.nombre ?? null
@@ -56,50 +80,35 @@ export async function crearGestion(form: FormData): Promise<string> {
     empresa_id: empresaId,
     operador_id: desdeAgencia ? usuario!.id : null,
     consignatario,
-    referencia_cliente: (form.get("referencia_cliente") as string) || null,
     tipo_operacion: (form.get("tipo_operacion") as string) || "importacion",
-    modo: (form.get("modo") as string) || "maritimo",
-    bl: (form.get("bl") as string) || null,
-    naviera: (form.get("naviera") as string) || null,
     contenedores: (form.get("contenedores") as string) || null,
-    puerto_origen: (form.get("puerto_origen") as string) || null,
-    puerto_destino: (form.get("puerto_destino") as string) || null,
-    descripcion_mercancia: (form.get("descripcion_mercancia") as string) || null,
-    proveedor: (form.get("proveedor") as string) || null,
+    naviera: (form.get("naviera") as string) || null,
     eta: (form.get("eta") as string) || null,
+    aduana_id: (form.get("aduana_id") as string) || null,
+    proveedor: (form.get("proveedor") as string) || null,
+    numero_factura: (form.get("numero_factura") as string) || null,
+    proviene_panama: form.get("proviene_panama") === "on" || form.get("proviene_panama") === "true",
+    descripcion_carga: (form.get("descripcion_carga") as string) || null,
   }
   const { data, error } = await sb.from("gestiones").insert(g).select("id").single()
   if (error) throw new Error(error.message)
   const gestionId = data.id as string
 
-  const ahora = Date.now()
-  const estadoSolicitada = await estadoIdPorNombre("Solicitada")
+  await subirAdjuntosDeForm(form, gestionId, usuario!.id, desdeAgencia)
+
+  const estadoPaso1 = await estadoIdPorNombre("Notificación%")
   await sb.from("eventos").insert({
     gestion_id: gestionId,
     tipo: "estado",
-    estado_id: estadoSolicitada,
-    fecha_evento: new Date(ahora).toISOString(),
+    estado_id: estadoPaso1,
     observacion: desdeAgencia
-      ? `Gestión creada por la agencia a nombre de ${consignatario ?? "el cliente"}.`
-      : "Solicitud creada por el cliente.",
+      ? `Operación registrada por la agencia a nombre de ${consignatario ?? "el cliente"}.`
+      : "Notificación del embarque creada por el cliente.",
     usuario_id: usuario!.id,
   })
 
-  if (desdeAgencia) {
-    // Creada por la agencia: queda aceptada y asignada a quien la creó.
-    const estadoAceptada = await estadoIdPorNombre("Aceptada%")
-    await sb.from("eventos").insert({
-      gestion_id: gestionId,
-      tipo: "estado",
-      estado_id: estadoAceptada,
-      fecha_evento: new Date(ahora + 1000).toISOString(),
-      observacion: `Aceptada. Operador asignado: ${usuario!.nombre}.`,
-      usuario_id: usuario!.id,
-    })
-    await notificarEmpresa(empresaId, "gestion_creada", `La agencia registró la gestión ${referencia} a tu nombre.`, gestionId)
-  } else {
-    await notificarAgencia("solicitud_nueva", `Nueva solicitud ${referencia} de ${consignatario ?? "cliente"}.`, gestionId)
-  }
+  if (desdeAgencia) await notificarEmpresa(empresaId, "gestion_creada", `La agencia registró la operación ${referencia} a tu nombre.`, gestionId)
+  else await notificarAgencia("solicitud_nueva", `Nueva notificación de embarque ${referencia} de ${consignatario ?? "cliente"}.`, gestionId)
 
   revalidatePath("/panel/gestiones")
   revalidatePath("/agencia")
@@ -107,24 +116,23 @@ export async function crearGestion(form: FormData): Promise<string> {
   return gestionId
 }
 
-// Operador acepta la solicitud (se asigna y avanza a "En proceso").
+// Alyem toma la operación: la asigna y avanza a "Revisión de documentación".
 export async function aceptarGestion(gestionId: string) {
   const usuario = await getUsuarioActivo()
   exigir(usuario, PERMISOS.GESTION_ACEPTAR)
   const sb = getSupabase()
 
   await sb.from("gestiones").update({ operador_id: usuario!.id }).eq("id", gestionId)
-  const estadoId = await estadoIdPorNombre("Aceptada%")
+  const estadoId = await estadoIdPorNombre("Revisión%")
   await sb.from("eventos").insert({
     gestion_id: gestionId,
     tipo: "estado",
     estado_id: estadoId,
-    observacion: `Aceptada. Operador asignado: ${usuario!.nombre}.`,
+    observacion: `En revisión. Operador asignado: ${usuario!.nombre}.`,
     usuario_id: usuario!.id,
   })
-
   const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
-  if (g) await notificarEmpresa(g.empresa_id, "gestion_aceptada", `Tu gestión ${g.referencia} fue aceptada.`, gestionId)
+  if (g) await notificarEmpresa(g.empresa_id, "gestion_aceptada", `Alyem tomó tu operación ${g.referencia} y está en revisión.`, gestionId)
   revalidatePath(`/g/${gestionId}`)
   revalidatePath("/agencia")
 }
@@ -138,16 +146,16 @@ export async function rechazarGestion(gestionId: string, motivo: string) {
     gestion_id: gestionId,
     tipo: "estado",
     estado_id: estadoId,
-    observacion: `Solicitud rechazada. Motivo: ${motivo}`,
+    observacion: `Operación cancelada. Motivo: ${motivo}`,
     usuario_id: usuario!.id,
   })
   const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
-  if (g) await notificarEmpresa(g.empresa_id, "gestion_rechazada", `Tu gestión ${g.referencia} fue rechazada: ${motivo}`, gestionId)
+  if (g) await notificarEmpresa(g.empresa_id, "gestion_rechazada", `Tu operación ${g.referencia} fue cancelada: ${motivo}`, gestionId)
   revalidatePath(`/g/${gestionId}`)
   revalidatePath("/agencia")
 }
 
-// Operador registra un evento (cambio de estado u observación).
+// Registra un evento (cambio de estado u observación). Sincroniza canal selectivo.
 export async function registrarEvento(form: FormData) {
   const usuario = await getUsuarioActivo()
   exigir(usuario, PERMISOS.EVENTO_REGISTRAR)
@@ -171,7 +179,8 @@ export async function registrarEvento(form: FormData) {
     usuario_id: usuario!.id,
   })
 
-  // Notifica al cliente si el evento es visible y (si es estado) el catálogo lo indica.
+  if (canal) await sb.from("gestiones").update({ canal_selectivo: canal }).eq("id", gestionId)
+
   if (!interno) {
     const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
     let avisar = true
@@ -179,26 +188,12 @@ export async function registrarEvento(form: FormData) {
       const { data: est } = await sb.from("estados_catalogo").select("notifica_cliente").eq("id", estadoId).maybeSingle()
       avisar = est?.notifica_cliente ?? true
     }
-    if (g && avisar)
-      await notificarEmpresa(g.empresa_id, "evento", `Actualización en ${g.referencia}.`, gestionId)
+    if (g && avisar) await notificarEmpresa(g.empresa_id, "evento", `Actualización en ${g.referencia}.`, gestionId)
   }
   revalidatePath(`/g/${gestionId}`)
 }
 
-// Fija las unidades importadas (para landed cost). Cliente de la empresa o agencia.
-export async function fijarUnidades(gestionId: string, unidades: number) {
-  const usuario = await getUsuarioActivo()
-  if (!usuario) throw new Error("Sesión no válida.")
-  const sb = getSupabase()
-  const { data: g } = await sb.from("gestiones").select("empresa_id").eq("id", gestionId).single()
-  const esCliente = usuario.rol === "cliente" && g?.empresa_id === usuario.empresa_id
-  const esAgencia = usuario.rol === "operador" || usuario.rol === "admin"
-  if (!esCliente && !esAgencia) throw new Error("No tienes permiso.")
-  await sb.from("gestiones").update({ unidades_importadas: unidades > 0 ? unidades : null }).eq("id", gestionId)
-  revalidatePath(`/g/${gestionId}`)
-}
-
-// Avanza la gestión al siguiente estado del flujo (normal+final, por orden).
+// Avanza al siguiente estado del flujo (normal+final, por orden).
 export async function avanzarEtapa(gestionId: string) {
   const usuario = await getUsuarioActivo()
   exigir(usuario, PERMISOS.EVENTO_REGISTRAR)
@@ -213,11 +208,7 @@ export async function avanzarEtapa(gestionId: string) {
   const flujo = estadosData ?? []
   if (flujo.length === 0) throw new Error("No hay estados configurados.")
 
-  const { data: actual } = await sb
-    .from("v_gestion_estado_actual")
-    .select("estado_id")
-    .eq("gestion_id", gestionId)
-    .maybeSingle()
+  const { data: actual } = await sb.from("v_gestion_estado_actual").select("estado_id").eq("gestion_id", gestionId).maybeSingle()
   const idx = actual?.estado_id ? flujo.findIndex((e) => e.id === actual.estado_id) : -1
   const siguiente = flujo[idx + 1]
   if (!siguiente) throw new Error("La operación ya está en la etapa final.")
@@ -237,28 +228,71 @@ export async function avanzarEtapa(gestionId: string) {
   revalidatePath(`/g/${gestionId}`)
 }
 
-// Operador edita los datos de la carga.
+// Edición genérica de datos del proceso (formularios por paso envían su subconjunto).
+const TEXT = [
+  "consignatario", "contenedores", "naviera", "proveedor", "numero_factura", "termino_compra",
+  "descripcion_carga", "origen_carga", "marca", "modelo", "forma_pago_otro", "razon_social",
+  "rtn", "numeros_factura", "carta_porte", "numero_np", "correlativo_liquidacion",
+  "naviera_observaciones", "gatepass_observacion",
+]
+const NUM = ["valor_fob", "valor_flete", "valor_seguro", "otros_gastos", "kilos", "bultos", "tiempo_libre_dias"]
+const DATE = ["eta", "fecha_fin_dias_libres"]
+const DATETIME = ["fecha_hora_despacho"]
+const ENUM = ["tipo_operacion", "forma_pago", "estado_factura", "canal_selectivo", "aduana_id"]
+const TRISTATE = [
+  "aforo", "digital", "previa", "naviera_aplica", "manifiesto_presentado", "liberacion",
+  "doc_transporte_original", "boletin_enviado", "boletin_pagado", "gatepass_aplica",
+  "transporte_naviera", "gatepass_entregado",
+]
+
 export async function editarDatosGestion(form: FormData) {
   const usuario = await getUsuarioActivo()
   exigir(usuario, PERMISOS.GESTION_EDITAR)
   const sb = getSupabase()
   const gestionId = form.get("id") as string
 
-  const campos = [
-    "referencia_cliente", "consignatario", "tipo_operacion", "modo", "bl", "naviera",
-    "buque_viaje", "contenedores", "tipo_contenedor", "puerto_origen", "puerto_destino",
-    "descripcion_mercancia", "proveedor",
-  ]
   const patch: Record<string, unknown> = {}
-  for (const c of campos) patch[c] = (form.get(c) as string) || null
-  for (const c of ["eta", "fecha_arribo", "fecha_liberacion", "fecha_entrega", "fecha_inicio_libres"]) {
-    const v = form.get(c) as string
-    patch[c] = v ? v : null
+  for (const c of TEXT) if (form.has(c)) patch[c] = (form.get(c) as string).trim() || null
+  for (const c of NUM) if (form.has(c)) { const v = form.get(c) as string; patch[c] = v ? Number(v) : null }
+  for (const c of DATE) if (form.has(c)) patch[c] = (form.get(c) as string) || null
+  for (const c of DATETIME) if (form.has(c)) { const v = form.get(c) as string; patch[c] = v ? new Date(v).toISOString() : null }
+  for (const c of ENUM) if (form.has(c)) patch[c] = (form.get(c) as string) || null
+  for (const c of TRISTATE) if (form.has(c)) { const v = form.get(c) as string; patch[c] = v === "si" ? true : v === "no" ? false : null }
+
+  if (Object.keys(patch).length > 0) await sb.from("gestiones").update(patch).eq("id", gestionId)
+
+  // Si se registró el canal selectivo, deja un evento con su color.
+  if (form.has("canal_selectivo") && form.get("canal_selectivo")) {
+    await sb.from("eventos").insert({
+      gestion_id: gestionId,
+      tipo: "observacion",
+      canal_selectividad: form.get("canal_selectivo") as string,
+      observacion: `Selectivo: canal ${form.get("canal_selectivo")}.`,
+      usuario_id: usuario!.id,
+    })
+    const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
+    if (g) await notificarEmpresa(g.empresa_id, "selectivo", `${g.referencia}: canal ${form.get("canal_selectivo")}.`, gestionId)
   }
-  for (const c of ["dias_libres", "unidades_importadas", "valor_cif", "peso_kg"]) {
-    const v = form.get(c) as string
-    patch[c] = v ? Number(v) : null
-  }
-  await sb.from("gestiones").update(patch).eq("id", gestionId)
+  revalidatePath(`/g/${gestionId}`)
+}
+
+// Paso 13 — el cliente marca que recibió la carga y el servicio.
+export async function marcarRecibido(gestionId: string) {
+  const usuario = await getUsuarioActivo()
+  if (!usuario) throw new Error("Sesión no válida.")
+  const sb = getSupabase()
+  const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
+  if (!g || (usuario.rol === "cliente" && g.empresa_id !== usuario.empresa_id)) throw new Error("No tienes acceso.")
+
+  await sb.from("gestiones").update({ recibido: true }).eq("id", gestionId)
+  const estadoCierre = await estadoIdPorNombre("Cierre%")
+  await sb.from("eventos").insert({
+    gestion_id: gestionId,
+    tipo: "estado",
+    estado_id: estadoCierre,
+    observacion: "El cliente confirmó la recepción de la carga y el servicio.",
+    usuario_id: usuario.id,
+  })
+  await notificarAgencia("cierre", `${g.referencia}: el cliente confirmó la recepción.`, gestionId)
   revalidatePath(`/g/${gestionId}`)
 }

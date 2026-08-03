@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Download, Boxes, CheckCircle2, Timer, FileText } from "lucide-react"
+import { Download, Boxes, CheckCircle2, Clock, FileText } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
@@ -18,11 +18,7 @@ export default async function ReportesCliente() {
   const gestiones = await listarGestiones(usuario)
 
   const cerradas = gestiones.filter((g) => g.estado?.tipo === "final")
-  // Días promedio de arribo a entrega.
-  const tiempos = gestiones
-    .filter((g) => g.fecha_arribo && g.fecha_entrega)
-    .map((g) => (new Date(g.fecha_entrega!).getTime() - new Date(g.fecha_arribo!).getTime()) / 86_400_000)
-  const promedio = tiempos.length ? (tiempos.reduce((a, b) => a + b, 0) / tiempos.length).toFixed(1) : "—"
+  const activas = gestiones.filter((g) => g.estado?.tipo !== "final" && g.estado?.tipo !== "cancelada")
 
   return (
     <PortalShell roles={["cliente"]}>
@@ -40,9 +36,9 @@ export default async function ReportesCliente() {
         />
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard label="Gestiones totales" value={gestiones.length} icon={Boxes} />
-          <StatCard label="Entregadas / cerradas" value={cerradas.length} icon={CheckCircle2} tone="success" />
-          <StatCard label="Días promedio arribo→entrega" value={promedio} icon={Timer} />
+          <StatCard label="Operaciones totales" value={gestiones.length} icon={Boxes} />
+          <StatCard label="Activas" value={activas.length} icon={Clock} />
+          <StatCard label="Cerradas" value={cerradas.length} icon={CheckCircle2} tone="success" />
         </div>
 
         <Card className="mt-6">
