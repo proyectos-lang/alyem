@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { X } from "lucide-react"
+import { useState } from "react"
+import { X, ChevronDown } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { navFiltrado } from "@/lib/nav"
 import type { Rol } from "@/lib/types"
@@ -23,6 +24,13 @@ export function PortalSidebar({
 }) {
   const pathname = usePathname()
   const groups = navFiltrado(rol, permisos)
+  const [cerrados, setCerrados] = useState<Set<string>>(new Set())
+  const toggleGrupo = (t: string) =>
+    setCerrados((prev) => {
+      const n = new Set(prev)
+      n.has(t) ? n.delete(t) : n.add(t)
+      return n
+    })
 
   const activo = (href: string) =>
     href === pathname || (href !== "/panel" && href !== "/agencia" && href !== "/admin" && pathname.startsWith(href))
@@ -51,38 +59,48 @@ export function PortalSidebar({
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3">
-          {groups.map((group, i) => (
-            <div key={i} className="mb-4">
-              {group.titulo && (
-                <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {group.titulo}
-                </p>
-              )}
-              <ul className="flex flex-col gap-0.5">
-                {group.items.map((item) => {
-                  const Icon = item.icon
-                  const on = activo(item.href)
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={onClose}
-                        className={cn(
-                          "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
-                          on
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-                        )}
-                      >
-                        <Icon className="size-4" />
-                        {item.label}
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          ))}
+          {groups.map((group, i) => {
+            const colapsado = cerrados.has(group.titulo ?? String(i))
+            return (
+              <div key={i} className="mb-3">
+                {group.titulo && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGrupo(group.titulo ?? String(i))}
+                    className="flex w-full items-center justify-between gap-2 px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                  >
+                    {group.titulo}
+                    <ChevronDown className={cn("size-3.5 transition-transform", colapsado && "-rotate-90")} />
+                  </button>
+                )}
+                {!colapsado && (
+                  <ul className="flex flex-col gap-0.5">
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const on = activo(item.href)
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            onClick={onClose}
+                            className={cn(
+                              "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
+                              on
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                            )}
+                          >
+                            <Icon className="size-4" />
+                            {item.label}
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+            )
+          })}
         </nav>
       </aside>
     </>
