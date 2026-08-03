@@ -28,7 +28,7 @@ export async function PortalShell({
   const sb = getSupabase()
   const { data: notis } = await sb
     .from("notificaciones")
-    .select("*")
+    .select("*, gestion:gestiones(referencia)")
     .eq("usuario_id", usuario.id)
     .order("created_at", { ascending: false })
     .limit(30)

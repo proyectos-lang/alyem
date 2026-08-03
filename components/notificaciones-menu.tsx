@@ -10,6 +10,38 @@ import { haceCuanto } from "@/lib/format"
 import type { Notificacion } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
+type Grupo = {
+  key: string
+  gestionId: string | null
+  titulo: string
+  items: Notificacion[]
+  sinLeer: number
+}
+
+// Agrupa por operación conservando el orden de llegada (más recientes primero).
+function agrupar(notificaciones: Notificacion[]): Grupo[] {
+  const orden: string[] = []
+  const mapa = new Map<string, Grupo>()
+  for (const n of notificaciones) {
+    const key = n.gestion_id ?? "__general__"
+    let g = mapa.get(key)
+    if (!g) {
+      g = {
+        key,
+        gestionId: n.gestion_id,
+        titulo: n.gestion_id ? (n.gestion?.referencia ?? "Operación") : "General",
+        items: [],
+        sinLeer: 0,
+      }
+      mapa.set(key, g)
+      orden.push(key)
+    }
+    g.items.push(n)
+    if (!n.leida) g.sinLeer++
+  }
+  return orden.map((k) => mapa.get(k)!)
+}
+
 export function NotificacionesMenu({ notificaciones }: { notificaciones: Notificacion[] }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -48,26 +80,34 @@ export function NotificacionesMenu({ notificaciones }: { notificaciones: Notific
         {notificaciones.length === 0 ? (
           <p className="px-3 py-6 text-center text-sm text-muted-foreground">Sin notificaciones.</p>
         ) : (
-          notificaciones.map((n) => {
-            const body = (
-              <div
-                className={cn(
-                  "border-b border-border px-3 py-2.5 text-sm last:border-0",
-                  !n.leida && "bg-primary/5",
-                )}
-              >
-                <p className={cn(!n.leida && "font-medium")}>{n.mensaje}</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">{haceCuanto(n.created_at)}</p>
-              </div>
-            )
-            return n.gestion_id ? (
-              <Link key={n.id} href={`/g/${n.gestion_id}`} className="block hover:bg-muted/50">
-                {body}
-              </Link>
-            ) : (
-              <div key={n.id}>{body}</div>
-            )
-          })
+          agrupar(notificaciones).map((grupo) => (
+            <div key={grupo.key} className="border-b border-border last:border-0">
+              {grupo.gestionId ? (
+                <Link
+                  href={`/g/${grupo.gestionId}`}
+                  className="flex items-center justify-between gap-2 bg-muted/40 px-3 py-1.5 hover:bg-muted"
+                >
+                  <span className="truncate text-xs font-semibold">{grupo.titulo}</span>
+                  {grupo.sinLeer > 0 && (
+                    <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                      {grupo.sinLeer}
+                    </span>
+                  )}
+                </Link>
+              ) : (
+                <p className="bg-muted/40 px-3 py-1.5 text-xs font-semibold">{grupo.titulo}</p>
+              )}
+              {grupo.items.map((n) => (
+                <div
+                  key={n.id}
+                  className={cn("px-3 py-2.5 pl-5 text-sm", !n.leida && "bg-primary/5")}
+                >
+                  <p className={cn(!n.leida && "font-medium")}>{n.mensaje}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">{haceCuanto(n.created_at)}</p>
+                </div>
+              ))}
+            </div>
+          ))
         )}
       </div>
     </Popover>

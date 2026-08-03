@@ -3,6 +3,7 @@ import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SetupNotice } from "@/components/setup-notice"
+import { ImprimirBoton } from "@/components/imprimir-boton"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
 import { getConfig } from "@/lib/config"
@@ -57,6 +58,7 @@ export default async function Indicadores() {
         <PageHeader
           titulo="Balanced Scorecard"
           descripcion="Indicadores clave de la operación, tiempos, cliente y calidad documental."
+          acciones={<ImprimirBoton />}
         />
 
         {/* Indicador principal: tiempo entre procesos */}

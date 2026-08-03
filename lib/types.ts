@@ -193,6 +193,7 @@ export interface Notificacion {
   mensaje: string
   leida: boolean
   created_at: string
+  gestion?: { referencia: string } | null
 }
 
 export interface Mensaje {

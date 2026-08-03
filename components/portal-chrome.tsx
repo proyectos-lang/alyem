@@ -23,10 +23,10 @@ export function PortalChrome({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-background md:pl-64">
+    <div className="min-h-screen bg-background md:pl-64 print:pl-0">
       <PortalSidebar rol={usuario.rol} permisos={permisos} agencia={agencia} open={open} onClose={() => setOpen(false)} />
 
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur">
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur print:hidden">
         <button
           type="button"
           onClick={() => setOpen(true)}
