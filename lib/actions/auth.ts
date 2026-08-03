@@ -11,6 +11,7 @@ export interface ResultadoLogin {
   ok: boolean
   error?: string
   destino?: string
+  nombre?: string
 }
 
 // Login básico (demo): valida usuario + contraseña contra la tabla usuarios y
@@ -26,7 +27,7 @@ export async function iniciarSesion(
 
   const { data: u } = await sb
     .from("usuarios")
-    .select("id, rol, activo, password")
+    .select("id, nombre, rol, activo, password")
     .eq("usuario", nombreUsuario)
     .maybeSingle()
 
@@ -49,7 +50,11 @@ export async function iniciarSesion(
     maxAge: 60 * 60 * 24 * 30,
   })
 
-  return { ok: true, destino: rol === "cliente" ? "/panel" : esCorporativo && rol === "admin" ? "/admin" : "/agencia" }
+  return {
+    ok: true,
+    nombre: (u.nombre as string) ?? nombreUsuario,
+    destino: rol === "cliente" ? "/panel" : rol === "admin" ? "/admin" : "/agencia",
+  }
 }
 
 export async function cerrarSesion() {

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
-import { Ship } from "lucide-react"
 import { Timeline } from "@/components/timeline"
 import { EstadoChip } from "@/components/estado-chip"
+import { Logo } from "@/components/logo"
 import { getSupabase } from "@/lib/supabase/server"
 import { getConfig } from "@/lib/config"
 import { estadosActuales } from "@/lib/data/gestiones"
@@ -42,10 +42,8 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
     <div className="min-h-screen bg-muted/30">
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 py-4">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Ship className="size-4.5" />
-          </span>
-          <span className="font-semibold">{agencia ?? "Seguimiento aduanero"}</span>
+          <Logo size="md" />
+          <span className="sr-only">{agencia ?? "Seguimiento aduanero"}</span>
         </div>
       </header>
 

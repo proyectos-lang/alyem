@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Ship, X } from "lucide-react"
+import { X } from "lucide-react"
+import { Logo } from "@/components/logo"
 import { navFiltrado } from "@/lib/nav"
 import type { Rol } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -36,17 +37,10 @@ export function PortalSidebar({
         )}
       >
         <div className="flex h-14 items-center justify-between gap-2 border-b border-sidebar-border px-4">
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-              <Ship className="size-4.5" />
-            </span>
-            <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold">{agencia}</span>
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Seguimiento aduanero
-              </span>
-            </div>
-          </div>
+          <Link href={`/${rol === "cliente" ? "panel" : rol === "operador" ? "agencia" : "admin"}`} onClick={onClose}>
+            <Logo size="md" />
+            <span className="sr-only">{agencia} — Seguimiento aduanero</span>
+          </Link>
           <button
             type="button"
             onClick={onClose}
