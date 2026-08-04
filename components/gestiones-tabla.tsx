@@ -17,11 +17,44 @@ export function GestionesTabla({
   mostrarEmpresa?: boolean
 }) {
   return (
-    <Card className="overflow-hidden">
+    <>
+      {/* Vista móvil: tarjetas */}
+      <div className="flex flex-col gap-2 md:hidden">
+        {gestiones.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
+            No hay operaciones que coincidan.
+          </p>
+        ) : (
+          gestiones.map((g) => (
+            <Link
+              key={g.id}
+              href={`/g/${g.id}`}
+              className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 active:bg-muted/50"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{g.referencia}</p>
+                  {mostrarEmpresa && <p className="truncate text-xs text-muted-foreground">{g.empresa?.nombre ?? "—"}</p>}
+                </div>
+                <EstadoChip nombre={g.estado?.nombre ?? "Sin estado"} color={g.estado?.color} />
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                {g.aduana?.nombre && <span>{g.aduana.nombre}</span>}
+                {g.naviera && <span>· {g.naviera}</span>}
+                <span>· ETA {fecha(g.eta)}</span>
+              </div>
+              <DiasLibresBadge gestion={g} />
+            </Link>
+          ))
+        )}
+      </div>
+
+      {/* Vista escritorio: tabla */}
+      <Card className="hidden overflow-hidden md:block">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead><SortHeader col="referencia">Referencia</SortHeader></TableHead>
+            <TableHead className="sticky left-0 z-10 bg-muted/30"><SortHeader col="referencia">Referencia</SortHeader></TableHead>
             {mostrarEmpresa && <TableHead><SortHeader col="empresa">Empresa</SortHeader></TableHead>}
             <TableHead><SortHeader col="aduana">Aduana</SortHeader></TableHead>
             <TableHead><SortHeader col="naviera">Naviera</SortHeader></TableHead>
@@ -33,8 +66,8 @@ export function GestionesTabla({
         </TableHeader>
         <TableBody>
           {gestiones.map((g) => (
-            <TableRow key={g.id} className="cursor-pointer">
-              <TableCell>
+            <TableRow key={g.id} className="group cursor-pointer">
+              <TableCell className="sticky left-0 z-10 bg-card group-hover:bg-muted/50">
                 <Link href={`/g/${g.id}`} className="block font-medium text-foreground hover:text-primary">
                   {g.referencia}
                   {g.numero_factura && (
@@ -69,6 +102,7 @@ export function GestionesTabla({
           )}
         </TableBody>
       </Table>
-    </Card>
+      </Card>
+    </>
   )
 }

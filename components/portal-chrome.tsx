@@ -5,6 +5,11 @@ import { Menu } from "lucide-react"
 import { PortalSidebar } from "@/components/portal-sidebar"
 import { UsuarioMenu } from "@/components/usuario-menu"
 import { NotificacionesMenu } from "@/components/notificaciones-menu"
+import { NotificacionesRealtime } from "@/components/notificaciones-realtime"
+import { BusquedaGlobal } from "@/components/busqueda-global"
+import { ActualizarBoton } from "@/components/actualizar-boton"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { MobileNav } from "@/components/mobile-nav"
 import type { Notificacion, Usuario } from "@/lib/types"
 
 export function PortalChrome({
@@ -34,13 +39,22 @@ export function PortalChrome({
         >
           <Menu className="size-5" />
         </button>
+        <BusquedaGlobal rol={usuario.rol} />
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
+          <ActualizarBoton />
           <NotificacionesMenu notificaciones={notificaciones} />
           <UsuarioMenu usuario={usuario} />
         </div>
       </header>
 
-      <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
+      <main className="min-h-[calc(100vh-3.5rem)] pb-16 md:pb-0">{children}</main>
+
+      {/* Barra de navegación inferior (solo móvil). */}
+      <MobileNav rol={usuario.rol} permisos={permisos} onMenu={() => setOpen(true)} />
+
+      {/* Notificaciones en tiempo real (toasts + aviso nativo). */}
+      <NotificacionesRealtime usuarioId={usuario.id} />
     </div>
   )
 }

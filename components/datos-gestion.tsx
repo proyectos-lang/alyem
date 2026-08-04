@@ -32,6 +32,7 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
         <Dato label="Referencia" valor={g.referencia} />
         <Dato label="Tipo de operación" valor={TIPO_OP[g.tipo_operacion]} />
         <Dato label="Aduana de ingreso" valor={g.aduana ? `${g.aduana.nombre} (${g.aduana.codigo})` : null} />
+        <Dato label="Régimen aduanero" valor={g.regimen?.nombre} />
         <Dato label="Naviera" valor={g.naviera} />
         <Dato label="ETA" valor={fecha(g.eta)} />
         <Dato label="Proveedor" valor={g.proveedor} />

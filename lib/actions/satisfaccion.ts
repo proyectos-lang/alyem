@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { getSupabase } from "../supabase/server"
 import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
+import { DIMENSIONES } from "../satisfaccion"
 
 export async function calificar(form: FormData) {
   const usuario = await getUsuarioActivo()
@@ -23,14 +24,15 @@ export async function calificar(form: FormData) {
     return v >= 1 && v <= 5 ? v : null
   }
 
+  const dimsPatch: Record<string, number | null> = {}
+  for (const d of DIMENSIONES) dimsPatch[d.key] = dim(d.key)
+
   const { error } = await sb.from("calificaciones").insert({
     gestion_id: gestionId,
     empresa_id: g.empresa_id,
     usuario_id: usuario!.id,
     estrellas,
-    dim_comunicacion: dim("dim_comunicacion"),
-    dim_tiempos: dim("dim_tiempos"),
-    dim_cobros: dim("dim_cobros"),
+    ...dimsPatch,
     comentario: (form.get("comentario") as string) || null,
   })
   if (error) throw new Error(error.message)

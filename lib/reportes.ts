@@ -9,6 +9,8 @@ export interface ColumnaReporte {
 export const COLUMNAS_REPORTE: ColumnaReporte[] = [
   { key: "referencia", label: "Referencia" },
   { key: "empresa", label: "Cliente" },
+  { key: "tipo_operacion", label: "Tipo de operación" },
+  { key: "regimen", label: "Régimen aduanero" },
   { key: "doc_transporte", label: "Documento de transporte" },
   { key: "factura", label: "Factura" },
   { key: "proveedor", label: "Proveedor" },

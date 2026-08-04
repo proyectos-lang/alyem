@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useModalClose } from "@/components/ui/modal"
+import { toast } from "sonner"
 import { editarDatosGestion } from "@/lib/actions/gestiones"
 import type { CampoPaso } from "@/lib/pasos"
 import type { Aduana, Gestion } from "@/lib/types"
@@ -23,10 +24,12 @@ export function PasoForm({
   gestion,
   campos,
   aduanas,
+  diligenciado = true,
 }: {
   gestion: Gestion
   campos: CampoPaso[]
   aduanas: Aduana[]
+  diligenciado?: boolean
 }) {
   const router = useRouter()
   const close = useModalClose()
@@ -41,10 +44,12 @@ export function PasoForm({
     startTransition(async () => {
       try {
         await editarDatosGestion(fd)
+        toast.success("Datos del paso guardados.")
         close()
         router.refresh()
       } catch (err) {
         setError((err as Error).message)
+        toast.error((err as Error).message)
       }
     })
   }
@@ -94,7 +99,9 @@ export function PasoForm({
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>{pending ? "Guardando…" : "Guardar"}</Button>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Guardando…" : diligenciado ? "Guardar cambios" : "Diligenciar paso"}
+        </Button>
       </div>
     </form>
   )

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { getSupabase, ADJUNTOS_BUCKET } from "../supabase/server"
 import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
+import { getConfig } from "../config"
 import { notificarAgencia, notificarEmpresa } from "./notificaciones"
 
 async function estadoIdPorNombre(patron: string): Promise<string | null> {
@@ -85,6 +86,7 @@ export async function crearGestion(form: FormData): Promise<string> {
     naviera: (form.get("naviera") as string) || null,
     eta: (form.get("eta") as string) || null,
     aduana_id: (form.get("aduana_id") as string) || null,
+    regimen_id: (form.get("regimen_id") as string) || null,
     proveedor: (form.get("proveedor") as string) || null,
     numero_factura: (form.get("numero_factura") as string) || null,
     proviene_panama: form.get("proviene_panama") === "on" || form.get("proviene_panama") === "true",
@@ -238,7 +240,7 @@ const TEXT = [
 const NUM = ["valor_fob", "valor_flete", "valor_seguro", "otros_gastos", "kilos", "bultos", "tiempo_libre_dias"]
 const DATE = ["eta", "fecha_fin_dias_libres"]
 const DATETIME = ["fecha_hora_despacho"]
-const ENUM = ["tipo_operacion", "forma_pago", "estado_factura", "canal_selectivo", "aduana_id"]
+const ENUM = ["tipo_operacion", "forma_pago", "estado_factura", "canal_selectivo", "aduana_id", "regimen_id"]
 const TRISTATE = [
   "aforo", "digital", "previa", "naviera_aplica", "manifiesto_presentado", "liberacion",
   "doc_transporte_original", "boletin_enviado", "boletin_pagado", "gatepass_aplica",
@@ -272,6 +274,25 @@ export async function editarDatosGestion(form: FormData) {
     })
     const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
     if (g) await notificarEmpresa(g.empresa_id, "selectivo", `${g.referencia}: canal ${form.get("canal_selectivo")}.`, gestionId)
+  }
+
+  // Alerta de días libres: al guardar la fecha de fin, si queda dentro del
+  // umbral configurado, avisa a la empresa y a la agencia (llega en tiempo real).
+  if (form.has("fecha_fin_dias_libres") && form.get("fecha_fin_dias_libres")) {
+    const fin = new Date(form.get("fecha_fin_dias_libres") as string).getTime()
+    const dias = Math.ceil((fin - Date.now()) / 86_400_000)
+    const umbral = Number((await getConfig("dias_alerta_libres")) ?? "3")
+    if (dias <= umbral) {
+      const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
+      if (g) {
+        const msg =
+          dias < 0
+            ? `${g.referencia}: días libres VENCIDOS hace ${Math.abs(dias)}d.`
+            : `${g.referencia}: quedan ${dias} día(s) libres.`
+        await notificarEmpresa(g.empresa_id, "dias_libres", msg, gestionId)
+        await notificarAgencia("dias_libres", msg, gestionId)
+      }
+    }
   }
   revalidatePath(`/g/${gestionId}`)
 }

@@ -3,6 +3,7 @@
 import { cookies } from "next/headers"
 import { getSupabase } from "../supabase/server"
 import { COOKIE_USUARIO } from "../session"
+import { capturarGeo } from "../geo"
 import type { Rol } from "../types"
 
 export type TipoAcceso = "cliente" | "corporativo"
@@ -49,6 +50,40 @@ export async function iniciarSesion(
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 30,
   })
+
+  // Aplica el tema guardado del usuario (para que se conserve entre sesiones y
+  // dispositivos). Resiliente si la columna `tema` aún no existe.
+  try {
+    const { data: pref } = await sb.from("usuarios").select("tema").eq("id", u.id as string).maybeSingle()
+    const tema = (pref as { tema?: string } | null)?.tema
+    if (tema === "dark" || tema === "light") {
+      store.set("alyem_tema", tema, { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 365 })
+    }
+  } catch {
+    /* columna tema inexistente: se ignora */
+  }
+
+  // Auditoría de inicio de sesión: guarda IP/ubicación en el usuario (para que
+  // el trigger la asigne a cada cambio) y registra el login. Resiliente si las
+  // columnas/tablas nuevas aún no existen.
+  try {
+    const geo = await capturarGeo()
+    await sb
+      .from("usuarios")
+      .update({ ultima_ip: geo.ip, ultima_lat: geo.lat, ultima_lng: geo.lng, ultima_ciudad: geo.ciudad, ultima_pais: geo.pais })
+      .eq("id", u.id as string)
+    await sb.from("auditoria_sesiones").insert({
+      usuario_id: u.id as string,
+      ip: geo.ip,
+      lat: geo.lat,
+      lng: geo.lng,
+      ciudad: geo.ciudad,
+      pais: geo.pais,
+      user_agent: geo.userAgent,
+    })
+  } catch {
+    /* columnas/tabla de auditoría de sesión inexistentes: se ignora */
+  }
 
   return {
     ok: true,

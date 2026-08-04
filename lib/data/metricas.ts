@@ -58,17 +58,20 @@ export function diasLibresRestantes(g: { fecha_fin_dias_libres: string | null })
 }
 
 export interface Alerta {
-  tipo: "fria" | "canal_rojo" | "libres" | "libres_vencidos"
+  tipo: "fria" | "canal_rojo" | "libres" | "libres_vencidos" | "sla_etapa"
   etiqueta: string
   severidad: "warning" | "danger"
 }
 
-export function alertasDe(g: GestionConEstado, diasFria: number): Alerta[] {
+// `slaEtapa` = SLA en días de la etapa actual (de estados_catalogo.sla_dias), si aplica.
+export function alertasDe(g: GestionConEstado, diasFria: number, slaEtapa?: number | null): Alerta[] {
   const out: Alerta[] = []
   const esFinal = g.estado?.tipo === "final" || g.estado?.tipo === "cancelada"
   if (esFinal) return out
   const sinAct = diasEnEtapa(g)
   if (sinAct != null && sinAct >= diasFria) out.push({ tipo: "fria", etiqueta: `Sin avanzar ${sinAct}d`, severidad: "warning" })
+  if (slaEtapa != null && slaEtapa > 0 && sinAct != null && sinAct >= slaEtapa)
+    out.push({ tipo: "sla_etapa", etiqueta: `Excede SLA de etapa (${slaEtapa}d)`, severidad: "danger" })
   if (g.canal_selectivo === "rojo") out.push({ tipo: "canal_rojo", etiqueta: "Canal rojo", severidad: "danger" })
   const libres = diasLibresRestantes(g)
   if (libres != null) {
@@ -149,5 +152,52 @@ export async function resumenBSC(gestiones: GestionConEstado[], slaObjetivo: num
     satisfaccionPromedio,
     calificaciones: califArr.length,
     calificacionesBajas: califArr.filter((c) => c.estrellas <= 3).length,
+  }
+}
+
+// ---- Tendencias para la torre de control ----------------------------------
+export interface Tendencias {
+  meses: { mes: string; creadas: number; cerradas: number }[]
+  etapas: { etapa: string; dias: number; color: string; sla: number | null }[]
+}
+
+function claveMes(iso: string): string {
+  return iso.slice(0, 7) // YYYY-MM
+}
+
+export async function tendenciasTorre(): Promise<Tendencias> {
+  const sb = getSupabase()
+  const [{ data: creadasRaw }, { data: cerradasRaw }, { data: estadosRaw }, tiempos] = await Promise.all([
+    sb.from("gestiones").select("fecha_solicitud"),
+    sb.from("eventos").select("fecha_evento, estado:estados_catalogo!inner(tipo)").eq("estado.tipo", "final"),
+    sb.from("estados_catalogo").select("nombre, sla_dias"),
+    tiemposEntreProcesos(),
+  ])
+
+  // Últimos 6 meses (incluye el actual), etiquetados YYYY-MM.
+  const hoy = new Date()
+  const meses: { mes: string; creadas: number; cerradas: number }[] = []
+  const idx = new Map<string, number>()
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    idx.set(key, meses.length)
+    meses.push({ mes: key, creadas: 0, cerradas: 0 })
+  }
+  for (const g of (creadasRaw as { fecha_solicitud: string }[]) ?? []) {
+    const i = idx.get(claveMes(g.fecha_solicitud))
+    if (i != null) meses[i].creadas++
+  }
+  for (const e of (cerradasRaw as { fecha_evento: string }[]) ?? []) {
+    const i = idx.get(claveMes(e.fecha_evento))
+    if (i != null) meses[i].cerradas++
+  }
+
+  const slaPorEtapa = new Map<string, number | null>()
+  for (const s of (estadosRaw as { nombre: string; sla_dias: number | null }[]) ?? []) slaPorEtapa.set(s.nombre, s.sla_dias)
+
+  return {
+    meses,
+    etapas: tiempos.map((t) => ({ etapa: t.etapa, dias: t.dias, color: t.color, sla: slaPorEtapa.get(t.etapa) ?? null })),
   }
 }

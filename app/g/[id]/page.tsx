@@ -15,6 +15,7 @@ import { MensajesPanel } from "@/components/mensajes-panel"
 import { ProcesoPanel } from "@/components/proceso-panel"
 import { CalificarForm } from "@/components/calificar-form"
 import { StarDisplay } from "@/components/star-rating"
+import { DIMENSIONES } from "@/lib/satisfaccion"
 import { DiasLibresBadge } from "@/components/dias-libres-badge"
 import { AvanzarEtapa } from "@/components/avanzar-etapa"
 import { MarcarRecibido } from "@/components/marcar-recibido"
@@ -29,6 +30,7 @@ import {
 } from "@/lib/data/gestiones"
 import { getTiposDocumento } from "@/lib/data/catalogos"
 import { listarAduanas } from "@/lib/data/aduanas"
+import { listarRegimenes } from "@/lib/data/regimenes"
 import { puede, esAgencia, PERMISOS } from "@/lib/permisos"
 import { fecha } from "@/lib/format"
 
@@ -52,7 +54,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
     )
   }
 
-  const [eventos, estados, documentos, requeridos, tipos, mensajes, calificacion, aduanas] = await Promise.all([
+  const [eventos, estados, documentos, requeridos, tipos, mensajes, calificacion, aduanas, regimenes] = await Promise.all([
     getEventos(id, usuario),
     getEstadosCatalogo(),
     getDocumentos(id),
@@ -61,6 +63,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
     getMensajes(id),
     getCalificacion(id),
     listarAduanas(true),
+    listarRegimenes(),
   ])
   const agencia = esAgencia(usuario.rol)
   const docsPendientes = requeridos.filter((r) => !r.cumplido).length
@@ -83,7 +86,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
         </Link>
 
         {/* Encabezado */}
-        <Card>
+        <Card className="overflow-hidden border-border bg-gradient-to-br from-accent/40 to-card">
           <CardContent className="flex flex-col gap-4 pt-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -114,7 +117,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                 {agencia && <CopiarTrack token={g.public_token} />}
                 {agencia && puede(usuario, PERMISOS.GESTION_EDITAR) && (
                   <Modal title="Editar datos de la operación" className="max-w-2xl" trigger={<Button variant="outline"><Pencil /> Editar</Button>}>
-                    <EditarDatosForm g={g} aduanas={aduanas} />
+                    <EditarDatosForm g={g} aduanas={aduanas} regimenes={regimenes} />
                   </Modal>
                 )}
                 {agencia && (
@@ -158,10 +161,24 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
         )}
         {calificacion && (
           <Card className="mt-6">
-            <CardContent className="flex flex-wrap items-center gap-3 pt-5">
-              <StarDisplay value={calificacion.estrellas} size="size-5" />
-              <span className="text-sm font-medium">{calificacion.estrellas}/5</span>
-              {calificacion.comentario && <p className="text-sm text-muted-foreground">“{calificacion.comentario}”</p>}
+            <CardContent className="flex flex-col gap-3 pt-5">
+              <div className="flex flex-wrap items-center gap-3">
+                <StarDisplay value={calificacion.estrellas} size="size-5" />
+                <span className="text-sm font-medium">{calificacion.estrellas}/5</span>
+                {calificacion.comentario && <p className="text-sm text-muted-foreground">“{calificacion.comentario}”</p>}
+              </div>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 border-t border-border pt-3 sm:grid-cols-2">
+                {DIMENSIONES.map((d) => {
+                  const v = (calificacion as Record<string, unknown>)[d.key] as number | null
+                  if (v == null) return null
+                  return (
+                    <div key={d.key} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">{d.label}</span>
+                      <StarDisplay value={v} />
+                    </div>
+                  )
+                })}
+              </div>
             </CardContent>
           </Card>
         )}

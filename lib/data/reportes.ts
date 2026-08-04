@@ -8,10 +8,15 @@ export interface FiltrosReporte {
   desde?: string
   hasta?: string
   base?: "eta" | "solicitud" // campo sobre el que se filtra el rango
+  regimen?: string // regimen_id
+  tipo?: string // tipo_operacion
+  documento?: string // texto a buscar en campos de documento
+  producto?: string // texto a buscar en campos de producto
 }
 
 export interface FilaReporte extends GestionConEstado {
   doc_transporte?: string | null
+  regimen_nombre?: string | null
 }
 
 const SEL =
@@ -37,6 +42,20 @@ export async function filasReporte(
   if (f.desde) q = q.gte(campo, f.desde)
   if (f.hasta) q = q.lte(campo, f.hasta)
 
+  // Filtros adicionales.
+  if (f.tipo) q = q.eq("tipo_operacion", f.tipo)
+  if (f.regimen) q = q.eq("regimen_id", f.regimen)
+  if (f.documento?.trim()) {
+    const t = `%${f.documento.trim()}%`
+    q = q.or(
+      [`numero_factura.ilike.${t}`, `numeros_factura.ilike.${t}`, `carta_porte.ilike.${t}`, `numero_np.ilike.${t}`, `correlativo_liquidacion.ilike.${t}`, `contenedores.ilike.${t}`].join(","),
+    )
+  }
+  if (f.producto?.trim()) {
+    const t = `%${f.producto.trim()}%`
+    q = q.or([`descripcion_carga.ilike.${t}`, `marca.ilike.${t}`, `modelo.ilike.${t}`].join(","))
+  }
+
   const { data } = await q
   const filas = (data as FilaReporte[]) ?? []
   if (filas.length === 0) return []
@@ -44,6 +63,14 @@ export async function filasReporte(
   // Estado actual derivado.
   const estados = await estadosActuales(filas.map((g) => g.id))
   for (const g of filas) g.estado = estados.get(g.id)
+
+  // Nombre del régimen aduanero (resuelto aparte, resiliente si no existe el catálogo).
+  const regIds = [...new Set(filas.map((g) => g.regimen_id).filter(Boolean))] as string[]
+  if (regIds.length) {
+    const { data: regs } = await sb.from("regimenes").select("id, nombre").in("id", regIds)
+    const rmap = new Map((regs as { id: string; nombre: string }[] ?? []).map((r) => [r.id, r.nombre]))
+    for (const g of filas) g.regimen_nombre = g.regimen_id ? rmap.get(g.regimen_id) ?? null : null
+  }
 
   // Documento de transporte por gestión.
   const ids = filas.map((g) => g.id)
@@ -63,6 +90,7 @@ export async function filasReporte(
 }
 
 const CANAL: Record<string, string> = { verde: "Verde", amarillo: "Amarillo", rojo: "Rojo" }
+const TIPO_OP: Record<string, string> = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" }
 const tri = (v: boolean | null | undefined) => (v === true ? "Sí" : v === false ? "No" : "")
 
 // Valor de una columna para una fila (mapeo al modelo).
@@ -86,6 +114,8 @@ export function valorColumna(g: FilaReporte, key: string): string {
     case "contenedor": return g.contenedores ?? ""
     case "manifiesto": return tri(g.manifiesto_presentado)
     case "prefijo": return g.aduana?.codigo ?? ""
+    case "tipo_operacion": return TIPO_OP[g.tipo_operacion] ?? g.tipo_operacion
+    case "regimen": return g.regimen_nombre ?? ""
     default: return ""
   }
 }

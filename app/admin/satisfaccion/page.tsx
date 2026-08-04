@@ -1,13 +1,16 @@
-import { Star, TriangleAlert } from "lucide-react"
+import { Star, TriangleAlert, Radar as RadarIcon } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { StarDisplay } from "@/components/star-rating"
+import { RadarSatisfaccion } from "@/components/radar-satisfaccion"
+import { DetalleCalificacion } from "@/components/detalle-calificacion"
+import { Reveal } from "@/components/ui/reveal"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
-import { getSupabase } from "@/lib/supabase/server"
+import { listarCalificaciones, promediosDimensiones } from "@/lib/data/satisfaccion"
 import { fecha } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
@@ -21,13 +24,8 @@ export default async function SatisfaccionPage() {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver satisfacción." />
 
-  const sb = getSupabase()
-  const { data } = await sb
-    .from("calificaciones")
-    .select("*, gestion:gestiones(referencia, operador:usuarios!gestiones_operador_id_fkey(nombre)), empresa:empresas(nombre)")
-    .order("created_at", { ascending: false })
-  const califs = (data as any[]) ?? []
-
+  const califs = await listarCalificaciones()
+  const radar = promediosDimensiones(califs)
   const bajas = califs.filter((c) => c.estrellas <= 3)
 
   return (
@@ -35,12 +33,38 @@ export default async function SatisfaccionPage() {
       <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6">
         <PageHeader titulo="Satisfacción del cliente" descripcion="Cómo perciben el servicio, gestión por gestión." />
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard label="Promedio general" value={`${prom(califs.map((c) => c.estrellas))} ★`} icon={Star} />
-          <StatCard label="Comunicación" value={prom(califs.map((c) => c.dim_comunicacion))} />
-          <StatCard label="Tiempos" value={prom(califs.map((c) => c.dim_tiempos))} />
-          <StatCard label="Claridad de cobros" value={prom(califs.map((c) => c.dim_cobros))} />
+          <StatCard label="Evaluaciones" value={califs.length} />
+          <StatCard label="Bajas (≤3★)" value={bajas.length} tone={bajas.length ? "danger" : "success"} />
+          <StatCard label="Dimensiones evaluadas" value={radar.filter((d) => d.n > 0).length} />
         </div>
+
+        {/* Radar de satisfacción por dimensión */}
+        <Reveal className="mt-6 block">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RadarIcon className="size-4" /> Promedio por dimensión
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_1fr]">
+            {califs.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">Aún no hay calificaciones.</p>
+            ) : (
+              <RadarSatisfaccion datos={radar} />
+            )}
+            <div className="flex flex-col justify-center gap-1.5">
+              {radar.map((d) => (
+                <div key={d.key} className="flex items-center justify-between gap-3 border-b border-border/60 py-1.5 text-sm last:border-0">
+                  <span className="text-muted-foreground">{d.label}</span>
+                  <span className="font-semibold">{d.n ? `${d.promedio} ★` : "—"}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        </Reveal>
 
         {bajas.length > 0 && (
           <Card className="mt-6 border-destructive/30">
@@ -70,21 +94,12 @@ export default async function SatisfaccionPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Comentarios recientes</CardTitle>
+            <CardTitle>Todas las evaluaciones</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {califs.length === 0 && <p className="text-sm text-muted-foreground">Aún no hay calificaciones.</p>}
             {califs.map((c) => (
-              <div key={c.id} className="flex items-start gap-3 rounded-lg border border-border p-3">
-                <StarDisplay value={c.estrellas} />
-                <div className="min-w-0">
-                  <p className="text-sm">
-                    <span className="font-medium">{c.gestion?.referencia}</span> · {c.empresa?.nombre}
-                  </p>
-                  {c.comentario && <p className="text-sm text-muted-foreground">“{c.comentario}”</p>}
-                </div>
-                <span className="ml-auto whitespace-nowrap text-xs text-muted-foreground">{fecha(c.created_at)}</span>
-              </div>
+              <DetalleCalificacion key={c.id} c={c} />
             ))}
           </CardContent>
         </Card>

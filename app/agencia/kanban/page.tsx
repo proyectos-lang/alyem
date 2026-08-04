@@ -2,16 +2,21 @@ import Link from "next/link"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { DiasLibresBadge } from "@/components/dias-libres-badge"
+import { GestionesTabla } from "@/components/gestiones-tabla"
+import { TableroVista } from "@/components/tablero-vista"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
+import { ordenarGestiones } from "@/lib/sort"
 import { getEstados } from "@/lib/data/catalogos"
 
 export const dynamic = "force-dynamic"
 
-export default async function KanbanPage() {
+export default async function KanbanPage({ searchParams }: { searchParams: Promise<{ vista?: string; sort?: string; dir?: string }> }) {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver el tablero." />
+  const { vista, sort, dir } = await searchParams
+  const esLista = vista === "lista"
 
   const [gestiones, estados] = await Promise.all([listarGestiones(usuario), getEstados()])
   // Columnas: estados normales y final, en orden; se omiten pausa/cancelada.
@@ -27,7 +32,12 @@ export default async function KanbanPage() {
   return (
     <PortalShell roles={["operador", "admin"]}>
       <div className="mx-auto max-w-full px-4 py-6 md:px-6">
-        <PageHeader titulo="Tablero" descripcion="Carga de trabajo por estado, de un vistazo." />
+        <PageHeader titulo="Tablero" descripcion="Carga de trabajo por estado, de un vistazo." acciones={<TableroVista />} />
+        {esLista ? (
+          <div className="mt-6">
+            <GestionesTabla gestiones={ordenarGestiones(gestiones, sort, dir)} mostrarEmpresa />
+          </div>
+        ) : (
         <div className="mt-6 flex gap-3 overflow-x-auto pb-4">
           {columnas.map((col) => {
             const items = porEstado.get(col.id) ?? []
@@ -60,6 +70,7 @@ export default async function KanbanPage() {
             )
           })}
         </div>
+        )}
       </div>
     </PortalShell>
   )

@@ -91,6 +91,11 @@ export async function getGestion(
   if (usuario.rol === "cliente" && g.empresa_id !== usuario.empresa_id) return null
   const estados = await estadosActuales([g.id])
   g.estado = estados.get(g.id)
+  // Régimen aduanero (resuelto aparte para no depender del esquema en el SELECT central).
+  if (g.regimen_id) {
+    const { data: r } = await sb.from("regimenes").select("id, nombre").eq("id", g.regimen_id).maybeSingle()
+    if (r) g.regimen = r as { id: string; nombre: string }
+  }
   return g
 }
 

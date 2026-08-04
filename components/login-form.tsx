@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Logo } from "@/components/logo"
 import { iniciarSesion, type TipoAcceso } from "@/lib/actions/auth"
+import { guardarUbicacionSesion } from "@/lib/actions/sesion"
 
 const INFO: Record<TipoAcceso, { titulo: string; icon: typeof Users; hint: string }> = {
   cliente: { titulo: "Acceso clientes", icon: Users, hint: "usuario: luis · clave: luis123" },
@@ -37,8 +38,20 @@ export function LoginForm() {
     const password = String(fd.get("password") ?? "")
     startTransition(async () => {
       const r = await iniciarSesion(tipo, usuario, password)
-      if (r.ok && r.destino) setBienvenida({ nombre: r.nombre ?? "", destino: r.destino })
-      else setError(r.error ?? "No se pudo iniciar sesión.")
+      if (r.ok && r.destino) {
+        // Pide permiso de ubicación al navegador y guarda las coordenadas
+        // precisas en la auditoría de la sesión (no bloquea el ingreso).
+        if (typeof navigator !== "undefined" && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => void guardarUbicacionSesion(pos.coords.latitude, pos.coords.longitude),
+            () => {},
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+          )
+        }
+        setBienvenida({ nombre: r.nombre ?? "", destino: r.destino })
+      } else {
+        setError(r.error ?? "No se pudo iniciar sesión.")
+      }
     })
   }
 
@@ -58,7 +71,7 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-lg">
+    <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl shadow-black/5">
       <div className="mb-6 flex flex-col items-center gap-3 text-center">
         <Logo size="lg" />
         <p className="text-xs text-muted-foreground">Plataforma de seguimiento aduanero</p>

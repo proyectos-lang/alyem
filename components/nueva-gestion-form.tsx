@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { toast } from "sonner"
 import { crearGestion } from "@/lib/actions/gestiones"
 import type { Aduana, Empresa, TipoDocumento } from "@/lib/types"
+import type { Regimen } from "@/lib/data/regimenes"
 
 const BASE = [
   "Documento de transporte",
@@ -33,10 +35,12 @@ export function NuevaGestionForm({
   aduanas,
   tipos,
   empresas,
+  regimenes = [],
 }: {
   aduanas: Aduana[]
   tipos: TipoDocumento[]
   empresas?: Empresa[]
+  regimenes?: Regimen[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -54,9 +58,11 @@ export function NuevaGestionForm({
     startTransition(async () => {
       try {
         const id = await crearGestion(fd)
+        toast.success("Operación creada correctamente.")
         router.push(`/g/${id}`)
       } catch (err) {
         setError((err as Error).message)
+        toast.error((err as Error).message)
       }
     })
   }
@@ -103,6 +109,17 @@ export function NuevaGestionForm({
               ))}
             </Select>
           </div>
+          {regimenes.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Régimen aduanero</Label>
+              <Select name="regimen_id" defaultValue="">
+                <option value="">Selecciona…</option>
+                {regimenes.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nombre}</option>
+                ))}
+              </Select>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <Label>Naviera</Label>
             <Input name="naviera" />

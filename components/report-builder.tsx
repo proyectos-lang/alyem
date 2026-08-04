@@ -8,8 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
+import { BookmarkPlus } from "lucide-react"
+import { toast } from "sonner"
+import { guardarDefinicion } from "@/lib/actions/reportes"
 import { COLUMNAS_REPORTE, COLUMNAS_DEFAULT } from "@/lib/reportes"
 import type { Empresa } from "@/lib/types"
+import type { Regimen } from "@/lib/data/regimenes"
 
 type Vista = {
   nombre: string
@@ -18,11 +22,15 @@ type Vista = {
   desde: string
   hasta: string
   base: string
+  regimen?: string
+  tipo?: string
+  documento?: string
+  producto?: string
 }
 
 const STORAGE_KEY = "alyem:reportes:vistas"
 
-export function ReportBuilder({ empresas }: { empresas?: Pick<Empresa, "id" | "nombre">[] }) {
+export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Empresa, "id" | "nombre">[]; regimenes?: Regimen[] }) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -33,6 +41,10 @@ export function ReportBuilder({ empresas }: { empresas?: Pick<Empresa, "id" | "n
   const [desde, setDesde] = useState(params.get("desde") ?? "")
   const [hasta, setHasta] = useState(params.get("hasta") ?? "")
   const [base, setBase] = useState(params.get("base") ?? "eta")
+  const [regimen, setRegimen] = useState(params.get("regimen") ?? "")
+  const [tipo, setTipo] = useState(params.get("tipo") ?? "")
+  const [documento, setDocumento] = useState(params.get("documento") ?? "")
+  const [producto, setProducto] = useState(params.get("producto") ?? "")
 
   const [vistas, setVistas] = useState<Vista[]>([])
   const [vistaSel, setVistaSel] = useState("")
@@ -58,7 +70,7 @@ export function ReportBuilder({ empresas }: { empresas?: Pick<Empresa, "id" | "n
   function guardarVista() {
     const nombre = window.prompt("Nombre de la vista")?.trim()
     if (!nombre) return
-    const vista: Vista = { nombre, cols: [...cols], empresaId, desde, hasta, base }
+    const vista: Vista = { nombre, cols: [...cols], empresaId, desde, hasta, base, regimen, tipo, documento, producto }
     const next = [...vistas.filter((v) => v.nombre !== nombre), vista].sort((a, b) => a.nombre.localeCompare(b.nombre))
     persistir(next)
     setVistaSel(nombre)
@@ -73,12 +85,20 @@ export function ReportBuilder({ empresas }: { empresas?: Pick<Empresa, "id" | "n
     setDesde(v.desde)
     setHasta(v.hasta)
     setBase(v.base)
+    setRegimen(v.regimen ?? "")
+    setTipo(v.tipo ?? "")
+    setDocumento(v.documento ?? "")
+    setProducto(v.producto ?? "")
     const p = new URLSearchParams()
     p.set("cols", v.cols.join(","))
     if (empresas && v.empresaId) p.set("empresa", v.empresaId)
     if (v.desde) p.set("desde", v.desde)
     if (v.hasta) p.set("hasta", v.hasta)
     p.set("base", v.base)
+    if (v.regimen) p.set("regimen", v.regimen)
+    if (v.tipo) p.set("tipo", v.tipo)
+    if (v.documento) p.set("documento", v.documento)
+    if (v.producto) p.set("producto", v.producto)
     router.push(`${pathname}?${p.toString()}`)
   }
 
@@ -95,8 +115,12 @@ export function ReportBuilder({ empresas }: { empresas?: Pick<Empresa, "id" | "n
     if (desde) p.set("desde", desde)
     if (hasta) p.set("hasta", hasta)
     p.set("base", base)
+    if (regimen) p.set("regimen", regimen)
+    if (tipo) p.set("tipo", tipo)
+    if (documento.trim()) p.set("documento", documento.trim())
+    if (producto.trim()) p.set("producto", producto.trim())
     return p.toString()
-  }, [cols, empresaId, desde, hasta, base, empresas])
+  }, [cols, empresaId, desde, hasta, base, regimen, tipo, documento, producto, empresas])
 
   function toggle(key: string) {
     setCols((prev) => {
@@ -161,6 +185,34 @@ export function ReportBuilder({ empresas }: { empresas?: Pick<Empresa, "id" | "n
             <Label>Hasta</Label>
             <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
           </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Tipo de operación</Label>
+            <Select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="importacion">Importación</option>
+              <option value="exportacion">Exportación</option>
+              <option value="transito">Tránsito</option>
+            </Select>
+          </div>
+          {regimenes.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Régimen aduanero</Label>
+              <Select value={regimen} onChange={(e) => setRegimen(e.target.value)}>
+                <option value="">Todos</option>
+                {regimenes.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nombre}</option>
+                ))}
+              </Select>
+            </div>
+          )}
+          <div className="flex flex-col gap-1.5">
+            <Label>N.º de documento</Label>
+            <Input value={documento} onChange={(e) => setDocumento(e.target.value)} placeholder="Factura, BL, NP…" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Producto</Label>
+            <Input value={producto} onChange={(e) => setProducto(e.target.value)} placeholder="Descripción, marca, modelo" />
+          </div>
         </div>
 
         {/* Columnas */}
@@ -182,6 +234,33 @@ export function ReportBuilder({ empresas }: { empresas?: Pick<Empresa, "id" | "n
         </div>
 
         <div className="flex flex-wrap justify-end gap-2">
+          {empresas && (
+            <Button
+              variant="outline"
+              disabled={cols.size === 0}
+              onClick={async () => {
+                const nombre = window.prompt("Nombre de la definición de reporte")?.trim()
+                if (!nombre) return
+                const fd = new FormData()
+                fd.set("nombre", nombre)
+                fd.set("cols", [...cols].join(","))
+                if (empresaId) fd.set("empresa", empresaId)
+                if (desde) fd.set("desde", desde)
+                if (hasta) fd.set("hasta", hasta)
+                fd.set("base", base)
+                if (regimen) fd.set("regimen", regimen)
+                if (tipo) fd.set("tipo", tipo)
+                if (documento.trim()) fd.set("documento", documento.trim())
+                if (producto.trim()) fd.set("producto", producto.trim())
+                fd.set("periodicidad", "manual")
+                await guardarDefinicion(fd)
+                toast.success(`Definición “${nombre}” guardada.`)
+                router.refresh()
+              }}
+            >
+              <BookmarkPlus /> Guardar definición
+            </Button>
+          )}
           <a href={`/api/export/reporte?${qs}`} download>
             <Button variant="outline" disabled={cols.size === 0}>
               <Download /> Excel

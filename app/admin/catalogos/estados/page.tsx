@@ -12,8 +12,10 @@ import { EstadoChip } from "@/components/estado-chip"
 import { AccionForm } from "@/components/accion-form"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
+import { Pencil } from "lucide-react"
 import { getEstados, getTiposDocumento } from "@/lib/data/catalogos"
-import { agregarEstado, agregarTipoDocumento } from "@/lib/actions/catalogos"
+import { listarRegimenes } from "@/lib/data/regimenes"
+import { agregarEstado, agregarTipoDocumento, actualizarSlaEstado, agregarRegimen } from "@/lib/actions/catalogos"
 
 export const dynamic = "force-dynamic"
 
@@ -21,7 +23,7 @@ export default async function CatalogosPage() {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver los catálogos." />
 
-  const [estados, tipos] = await Promise.all([getEstados(), getTiposDocumento()])
+  const [estados, tipos, regimenes] = await Promise.all([getEstados(), getTiposDocumento(), listarRegimenes(false)])
 
   return (
     <PortalShell roles={["admin"]}>
@@ -58,6 +60,10 @@ export default async function CatalogosPage() {
                       <option value="final">Final</option>
                     </Select>
                   </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label>SLA de la etapa (días, opcional)</Label>
+                    <Input name="sla_dias" type="number" min={0} placeholder="Ej. 3" />
+                  </div>
                   <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" name="notifica_cliente" defaultChecked className="size-4 accent-[var(--primary)]" />
                     Notifica al cliente
@@ -65,9 +71,25 @@ export default async function CatalogosPage() {
                 </AccionForm>
               </Modal>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
+            <CardContent className="flex flex-col gap-1.5">
               {estados.map((e) => (
-                <EstadoChip key={e.id} nombre={e.nombre} color={e.color} />
+                <div key={e.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
+                  <EstadoChip nombre={e.nombre} color={e.color} />
+                  <div className="flex items-center gap-2">
+                    <Badge variant={e.sla_dias != null ? "secondary" : "muted"}>
+                      {e.sla_dias != null ? `SLA ${e.sla_dias}d` : "Sin SLA"}
+                    </Badge>
+                    <Modal title={`SLA de “${e.nombre}”`} trigger={<Button size="icon-sm" variant="ghost"><Pencil /></Button>}>
+                      <AccionForm action={actualizarSlaEstado}>
+                        <input type="hidden" name="id" value={e.id} />
+                        <div className="flex flex-col gap-1.5">
+                          <Label>SLA objetivo (días). Vacío = sin objetivo.</Label>
+                          <Input name="sla_dias" type="number" min={0} defaultValue={e.sla_dias ?? ""} />
+                        </div>
+                      </AccionForm>
+                    </Modal>
+                  </div>
+                </div>
               ))}
             </CardContent>
           </Card>
@@ -92,6 +114,31 @@ export default async function CatalogosPage() {
             <CardContent className="flex flex-wrap gap-2">
               {tipos.map((t) => (
                 <Badge key={t.id} variant="secondary">{t.nombre}</Badge>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Regímenes aduaneros */}
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle>Regímenes aduaneros</CardTitle>
+              <Modal title="Nuevo régimen" trigger={<Button size="sm" variant="outline"><Plus /> Agregar</Button>}>
+                <AccionForm action={agregarRegimen}>
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Nombre</Label>
+                    <Input name="nombre" required placeholder="Ej. Importación temporal" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Orden</Label>
+                    <Input name="orden" type="number" defaultValue={0} />
+                  </div>
+                </AccionForm>
+              </Modal>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {regimenes.length === 0 && <p className="text-sm text-muted-foreground">Corre <code>supabase/analitica.sql</code> para habilitar los regímenes.</p>}
+              {regimenes.map((r) => (
+                <Badge key={r.id} variant="secondary">{r.nombre}</Badge>
               ))}
             </CardContent>
           </Card>

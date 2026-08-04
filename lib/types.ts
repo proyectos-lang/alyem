@@ -29,6 +29,7 @@ export interface Usuario {
   permisos: string[] | null
   activo: boolean
   created_at: string
+  tema?: string | null
   empresa?: Pick<Empresa, "id" | "nombre"> | null
 }
 
@@ -40,6 +41,7 @@ export interface EstadoCatalogo {
   notifica_cliente: boolean
   tipo: TipoEstado
   activo: boolean
+  sla_dias?: number | null
 }
 
 export interface TipoDocumento {
@@ -72,6 +74,7 @@ export interface Gestion {
   naviera: string | null
   eta: string | null
   aduana_id: string | null
+  regimen_id: string | null
   proveedor: string | null
   numero_factura: string | null
   proviene_panama: boolean
@@ -141,6 +144,7 @@ export interface Gestion {
   empresa?: Pick<Empresa, "id" | "nombre"> | null
   operador?: Pick<Usuario, "id" | "nombre"> | null
   aduana?: Pick<Aduana, "id" | "nombre" | "codigo"> | null
+  regimen?: { id: string; nombre: string } | null
 }
 
 export interface Evento {
@@ -216,6 +220,10 @@ export interface Calificacion {
   dim_comunicacion: number | null
   dim_tiempos: number | null
   dim_cobros: number | null
+  dim_documentacion: number | null
+  dim_resolucion: number | null
+  dim_atencion: number | null
+  dim_valor: number | null
   comentario: string | null
   created_at: string
 }

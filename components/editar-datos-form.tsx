@@ -8,11 +8,13 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useModalClose } from "@/components/ui/modal"
+import { toast } from "sonner"
 import { editarDatosGestion } from "@/lib/actions/gestiones"
 import type { Aduana, Gestion } from "@/lib/types"
+import type { Regimen } from "@/lib/data/regimenes"
 
 // Edición de los datos de cabecera de la operación (Paso 1).
-export function EditarDatosForm({ g, aduanas }: { g: Gestion; aduanas: Aduana[] }) {
+export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; aduanas: Aduana[]; regimenes?: Regimen[] }) {
   const router = useRouter()
   const close = useModalClose()
   const [pending, startTransition] = useTransition()
@@ -26,10 +28,12 @@ export function EditarDatosForm({ g, aduanas }: { g: Gestion; aduanas: Aduana[] 
     startTransition(async () => {
       try {
         await editarDatosGestion(fd)
+        toast.success("Cambios guardados.")
         close()
         router.refresh()
       } catch (err) {
         setError((err as Error).message)
+        toast.error((err as Error).message)
       }
     })
   }
@@ -54,6 +58,17 @@ export function EditarDatosForm({ g, aduanas }: { g: Gestion; aduanas: Aduana[] 
             ))}
           </Select>
         </div>
+        {regimenes.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <Label>Régimen aduanero</Label>
+            <Select name="regimen_id" defaultValue={g.regimen_id ?? ""}>
+              <option value="">—</option>
+              {regimenes.map((r) => (
+                <option key={r.id} value={r.id}>{r.nombre}</option>
+              ))}
+            </Select>
+          </div>
+        )}
         <div className="flex flex-col gap-1.5">
           <Label>Naviera</Label>
           <Input name="naviera" defaultValue={g.naviera ?? ""} />

@@ -1,60 +1,44 @@
-import { Boxes, FileCheck, Star, TriangleAlert } from "lucide-react"
+import { Boxes, CheckCircle2, Users, DollarSign } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
-import { getSupabase } from "@/lib/supabase/server"
+import { ImprimirBoton } from "@/components/imprimir-boton"
+import { Reveal } from "@/components/ui/reveal"
+import { DashboardGerencial } from "@/components/dashboard-gerencial"
+import { SetupNotice } from "@/components/setup-notice"
+import { usuarioActivoSeguro } from "@/lib/portal"
+import { analiticaGerencial } from "@/lib/data/analitica"
 
 export const dynamic = "force-dynamic"
 
-export default async function AdminResumen() {
-  const sb = getSupabase()
-  const [gestTotal, gestActivas, docsPend, califs, empresas] = await Promise.all([
-    sb.from("gestiones").select("id", { count: "exact", head: true }),
-    sb
-      .from("v_gestion_estado_actual")
-      .select("gestion_id, estado_tipo", { count: "exact", head: true })
-      .neq("estado_tipo", "final"),
-    sb.from("documentos").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
-    sb.from("calificaciones").select("estrellas"),
-    sb.from("empresas").select("id", { count: "exact", head: true }),
-  ])
+const nfCompact = (n: number) => new Intl.NumberFormat("es-HN", { notation: "compact", maximumFractionDigits: 1 }).format(n)
 
-  const estrellas = (califs.data as { estrellas: number }[]) ?? []
-  const promedio = estrellas.length
-    ? (estrellas.reduce((a, b) => a + b.estrellas, 0) / estrellas.length).toFixed(1)
-    : "—"
-  const bajas = estrellas.filter((c) => c.estrellas <= 3).length
+export default async function AdminResumen() {
+  const usuario = await usuarioActivoSeguro()
+  if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver el resumen." />
+
+  const a = await analiticaGerencial()
 
   return (
     <PortalShell roles={["admin"]}>
       <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6">
-        <PageHeader titulo="Resumen del negocio" descripcion="Visión global de la operación de la agencia." />
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Operaciones totales" value={gestTotal.count ?? 0} icon={Boxes} />
-          <StatCard label="Operaciones activas" value={gestActivas.count ?? 0} icon={Boxes} tone="success" />
-          <StatCard
-            label="Documentos por revisar"
-            value={docsPend.count ?? 0}
-            icon={FileCheck}
-            tone={docsPend.count ? "warning" : "default"}
-          />
-          <StatCard
-            label="Satisfacción promedio"
-            value={`${promedio} ★`}
-            hint={`${bajas} calificación(es) ≤ 3`}
-            icon={Star}
-            tone={bajas ? "danger" : "default"}
-          />
-        </div>
+        <PageHeader
+          titulo="Resumen del negocio"
+          descripcion="Dashboards gerenciales de la operación: tendencias, volúmenes y satisfacción."
+          acciones={<ImprimirBoton />}
+        />
 
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <StatCard label="Empresas cliente" value={empresas.count ?? 0} icon={Boxes} />
-          <StatCard
-            label="Calificaciones bajas por atender"
-            value={bajas}
-            icon={TriangleAlert}
-            tone={bajas ? "danger" : "default"}
-          />
+        {/* KPIs destacados */}
+        <Reveal className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+          <StatCard label="Operaciones totales" value={a.totales.total} icon={Boxes} spark={a.serieMensual.map((m) => m.creadas)} />
+          <StatCard label="Activas" value={a.totales.activas} icon={Boxes} tone="warning" proporcion={{ valor: a.totales.activas, total: a.totales.total }} />
+          <StatCard label="Cerradas" value={a.totales.cerradas} icon={CheckCircle2} tone="success" spark={a.serieMensual.map((m) => m.cerradas)} />
+          <StatCard label="Valor CIF (aprox.)" value={nfCompact(a.totales.cifTotal)} icon={DollarSign} spark={a.serieMensual.map((m) => m.cif)} />
+          <StatCard label="Clientes activos" value={a.totales.clientes} icon={Users} />
+        </Reveal>
+
+        <div className="mt-6">
+          <DashboardGerencial data={a} />
         </div>
       </div>
     </PortalShell>

@@ -7,14 +7,16 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { StarInput } from "@/components/star-rating"
+import { toast } from "sonner"
 import { calificar } from "@/lib/actions/satisfaccion"
+import { DIMENSIONES } from "@/lib/satisfaccion"
 
 export function CalificarForm({ gestionId }: { gestionId: string }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [general, setGeneral] = useState(0)
-  const [dims, setDims] = useState({ dim_comunicacion: 0, dim_tiempos: 0, dim_cobros: 0 })
+  const [dims, setDims] = useState<Record<string, number>>({})
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -26,23 +28,23 @@ export function CalificarForm({ gestionId }: { gestionId: string }) {
     const fd = new FormData(e.currentTarget)
     fd.set("gestion_id", gestionId)
     fd.set("estrellas", String(general))
-    fd.set("dim_comunicacion", String(dims.dim_comunicacion))
-    fd.set("dim_tiempos", String(dims.dim_tiempos))
-    fd.set("dim_cobros", String(dims.dim_cobros))
+    for (const d of DIMENSIONES) fd.set(d.key, String(dims[d.key] ?? 0))
     startTransition(async () => {
       try {
         await calificar(fd)
+        toast.success("¡Gracias por tu calificación!")
         router.refresh()
       } catch (err) {
         setError((err as Error).message)
+        toast.error((err as Error).message)
       }
     })
   }
 
-  const dimRow = (key: keyof typeof dims, label: string) => (
-    <div className="flex items-center justify-between">
+  const dimRow = (key: string, label: string) => (
+    <div key={key} className="flex items-center justify-between gap-3">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <StarInput size="size-5" value={dims[key]} onChange={(v) => setDims((d) => ({ ...d, [key]: v }))} />
+      <StarInput size="size-5" value={dims[key] ?? 0} onChange={(v) => setDims((d) => ({ ...d, [key]: v }))} />
     </div>
   )
 
@@ -57,10 +59,8 @@ export function CalificarForm({ gestionId }: { gestionId: string }) {
             <Label>Calificación general</Label>
             <StarInput size="size-8" value={general} onChange={setGeneral} />
           </div>
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
-            {dimRow("dim_comunicacion", "Comunicación y actualizaciones")}
-            {dimRow("dim_tiempos", "Tiempos de la gestión")}
-            {dimRow("dim_cobros", "Claridad de los cobros")}
+          <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-card p-3">
+            {DIMENSIONES.map((d) => dimRow(d.key, d.label))}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Comentario (opcional)</Label>

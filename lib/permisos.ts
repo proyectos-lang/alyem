@@ -18,6 +18,7 @@ export const PERMISOS = {
   ADMIN_USUARIOS: "admin.usuarios",
   ADMIN_CATALOGOS: "admin.catalogos",
   ADMIN_CONFIG: "admin.config",
+  ADMIN_AUDITORIA: "admin.auditoria",
 } as const
 
 export type ClavePermiso = (typeof PERMISOS)[keyof typeof PERMISOS]
@@ -39,6 +40,7 @@ export const PERMISOS_META: { clave: ClavePermiso; etiqueta: string; grupo: stri
   { clave: PERMISOS.ADMIN_USUARIOS, etiqueta: "Administrar usuarios y permisos", grupo: "Administración" },
   { clave: PERMISOS.ADMIN_CATALOGOS, etiqueta: "Administrar catálogos", grupo: "Administración" },
   { clave: PERMISOS.ADMIN_CONFIG, etiqueta: "Configuración de reglas", grupo: "Administración" },
+  { clave: PERMISOS.ADMIN_AUDITORIA, etiqueta: "Ver bitácora de auditoría", grupo: "Administración" },
 ]
 
 const P = PERMISOS

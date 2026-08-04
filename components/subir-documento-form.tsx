@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { useModalClose } from "@/components/ui/modal"
+import { toast } from "sonner"
 import { subirDocumento } from "@/lib/actions/documentos"
 import type { TipoDocumento } from "@/lib/types"
 
@@ -32,25 +33,39 @@ export function SubirDocumentoForm({
     startTransition(async () => {
       try {
         await subirDocumento(fd)
+        toast.success("Documento subido.")
         close()
         router.refresh()
       } catch (err) {
         setError((err as Error).message)
+        toast.error((err as Error).message)
       }
     })
   }
+
+  const nombreFijo = tipoFijo ? tipos.find((t) => t.id === tipoFijo)?.nombre : null
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <Label>Tipo de documento</Label>
-        <Select name="tipo_documento_id" defaultValue={tipoFijo ?? tipos[0]?.id}>
-          {tipos.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.nombre}
-            </option>
-          ))}
-        </Select>
+        {tipoFijo ? (
+          // Amarrado a un requerimiento: el tipo queda fijo (no editable).
+          <>
+            <input type="hidden" name="tipo_documento_id" value={tipoFijo} />
+            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
+              {nombreFijo ?? "Documento solicitado"}
+            </div>
+          </>
+        ) : (
+          <Select name="tipo_documento_id" defaultValue={tipos[0]?.id}>
+            {tipos.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nombre}
+              </option>
+            ))}
+          </Select>
+        )}
       </div>
       <div className="flex flex-col gap-1.5">
         <Label>Archivo (PDF o imagen)</Label>

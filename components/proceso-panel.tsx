@@ -1,4 +1,4 @@
-import { Check, Circle, Pencil, FileText, CircleDot } from "lucide-react"
+import { Check, Circle, Pencil, ClipboardPen, FileText, CircleDot } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,21 @@ import { PASOS, type CampoPaso } from "@/lib/pasos"
 import { fecha, fechaHora } from "@/lib/format"
 import type { Aduana, Documento, EstadoCatalogo, Gestion } from "@/lib/types"
 import { cn } from "@/lib/utils"
+
+// Campos que se capturan en el intake (Paso 1) pero también figuran en pasos
+// posteriores. Vienen "heredados", así que no deben marcar por sí solos un paso
+// posterior como diligenciado (p. ej. `descripcion_carga` en Revisión).
+const CAMPOS_HEREDADOS = new Set(["descripcion_carga"])
+
+// Un paso está "diligenciado" si al menos uno de sus campos PROPIOS ya tiene
+// valor (incluye el `false` de los tristate, que es una respuesta válida).
+function pasoDiligenciado(g: Gestion, campos: CampoPaso[]): boolean {
+  return campos.some((c) => {
+    if (CAMPOS_HEREDADOS.has(c.name)) return false
+    const v = (g as Record<string, unknown>)[c.name]
+    return v != null && v !== ""
+  })
+}
 
 function mostrarValor(g: Gestion, c: CampoPaso): string {
   const v = (g as Record<string, unknown>)[c.name]
@@ -48,6 +63,7 @@ export function ProcesoPanel({
         const docsPaso = paso.docs
           ? documentos.filter((d) => paso.docs!.includes(d.tipo?.nombre ?? ""))
           : []
+        const diligenciado = pasoDiligenciado(gestion, paso.campos)
 
         return (
           <Card key={paso.nombre} className={cn(enCurso && "border-primary/40 ring-1 ring-primary/20")}>
@@ -75,8 +91,16 @@ export function ProcesoPanel({
                   </div>
                 </div>
                 {puedeEditar && paso.campos.length > 0 && (
-                  <Modal title={paso.nombre} className="max-w-2xl" trigger={<Button size="xs" variant="outline"><Pencil /> Editar</Button>}>
-                    <PasoForm gestion={gestion} campos={paso.campos} aduanas={aduanas} />
+                  <Modal
+                    title={paso.nombre}
+                    className="max-w-2xl"
+                    trigger={
+                      <Button size="xs" variant={diligenciado ? "outline" : "default"}>
+                        {diligenciado ? <><Pencil /> Editar</> : <><ClipboardPen /> Diligenciar</>}
+                      </Button>
+                    }
+                  >
+                    <PasoForm gestion={gestion} campos={paso.campos} aduanas={aduanas} diligenciado={diligenciado} />
                   </Modal>
                 )}
               </div>
