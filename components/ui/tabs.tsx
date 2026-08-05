@@ -26,7 +26,9 @@ function TabsList({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-1",
+        // Scrollable en móvil para que no se desborde con muchas pestañas.
+        "flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-border bg-muted/50 p-1",
+        "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
       {...props}
@@ -43,7 +45,7 @@ function TabsTrigger({ value, className, children }: { value: string; className?
       onClick={() => ctx.setValue(value)}
       data-state={active ? "active" : "inactive"}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
         active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
         className,
       )}

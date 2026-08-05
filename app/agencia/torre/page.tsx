@@ -143,7 +143,55 @@ export default async function TorreControl({ searchParams }: { searchParams: Pro
           <Buscador />
         </div>
 
-        <Card className="mt-3 overflow-hidden">
+        {/* Vista móvil: tarjetas */}
+        <div className="mt-3 flex flex-col gap-2 md:hidden">
+          {filtradas.length === 0 && (
+            <p className="rounded-lg border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+              {ver ? "No hay operaciones que coincidan con el filtro." : "No hay operaciones activas."}
+            </p>
+          )}
+          {filtradas.map(({ g, alertas, enEtapa, total, libres }) => (
+            <Link
+              key={g.id}
+              href={`/g/${g.id}`}
+              className={cn(
+                "flex flex-col gap-2 rounded-xl border border-border bg-card p-3 active:bg-muted/50",
+                alertas.some((a) => a.severidad === "danger") && "border-destructive/40 bg-destructive/5",
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{g.referencia}</p>
+                  <p className="truncate text-xs text-muted-foreground">{g.empresa?.nombre ?? "—"}</p>
+                </div>
+                <EstadoChip nombre={g.estado?.nombre} color={g.estado?.color} />
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>En etapa: <b className={cn(enEtapa != null && enEtapa >= diasFria && "text-amber-600")}>{enEtapa ?? "—"}d</b></span>
+                <span>Total: {total}d</span>
+                <span className={cn(libres != null && libres <= 3 && "text-amber-600", libres != null && libres < 0 && "text-destructive")}>
+                  Libres: {libres ?? "—"}{libres != null ? "d" : ""}
+                </span>
+                {g.canal_selectivo && (
+                  <span className="inline-flex items-center gap-1 capitalize">
+                    <span className="size-2 rounded-full" style={{ backgroundColor: CANAL_COLOR[g.canal_selectivo] }} />
+                    {g.canal_selectivo}
+                  </span>
+                )}
+              </div>
+              {alertas.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {alertas.map((a, i) => (
+                    <Badge key={i} variant={a.severidad === "danger" ? "danger" : "warning"}>{a.etiqueta}</Badge>
+                  ))}
+                </div>
+              )}
+            </Link>
+          ))}
+        </div>
+
+        {/* Vista escritorio: tabla */}
+        <Card className="mt-3 hidden overflow-hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
