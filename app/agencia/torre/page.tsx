@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Buscador } from "@/components/buscador"
 import { TorreTendencias } from "@/components/torre-tendencias"
 import { TorreEtas } from "@/components/torre-etas"
+import { TorreRiesgo } from "@/components/torre-riesgo"
 import { BanerAtencion } from "@/components/baner-atencion"
 import { Reveal } from "@/components/ui/reveal"
 import { SetupNotice } from "@/components/setup-notice"
@@ -18,6 +19,7 @@ import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones, getEstadosCatalogo } from "@/lib/data/gestiones"
 import { getConfig } from "@/lib/config"
 import { diasEnEtapa, diasTotales, diasLibresRestantes, alertasDe, tendenciasTorre } from "@/lib/data/metricas"
+import { predecirRetrasos } from "@/lib/data/prediccion"
 import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
@@ -33,13 +35,15 @@ export default async function TorreControl({ searchParams }: { searchParams: Pro
   const { q, ver: verRaw } = await searchParams
   const ver = (["alertas", "rojo", "libres"].includes(verRaw ?? "") ? verRaw : undefined) as Ver
 
-  const [gestiones, diasFriaStr, estados, tendencias] = await Promise.all([
+  const [gestiones, diasFriaStr, slaStr, estados, tendencias] = await Promise.all([
     listarGestiones(usuario, { texto: q }),
     getConfig("dias_gestion_fria"),
+    getConfig("sla_dias_proceso"),
     getEstadosCatalogo(),
     tendenciasTorre(),
   ])
   const diasFria = Number(diasFriaStr ?? "4")
+  const predicciones = predecirRetrasos(gestiones, estados, tendencias.etapas.map((e) => ({ etapa: e.etapa, orden: 0, color: e.color, dias: e.dias, n: 0 })), Number(slaStr ?? "15"))
   const slaPorEstado = new Map(estados.map((e) => [e.nombre, e.sla_dias ?? null]))
 
   const activas = gestiones.filter((g) => g.estado?.tipo !== "final" && g.estado?.tipo !== "cancelada")
@@ -256,6 +260,11 @@ export default async function TorreControl({ searchParams }: { searchParams: Pro
         {/* Próximos arribos por ETA */}
         <div className="mt-6">
           <TorreEtas arribos={arribos} />
+        </div>
+
+        {/* Predicción de retrasos */}
+        <div className="mt-6">
+          <TorreRiesgo predicciones={predicciones} />
         </div>
 
         {/* Tendencias */}

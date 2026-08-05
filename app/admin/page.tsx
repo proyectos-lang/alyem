@@ -5,9 +5,12 @@ import { StatCard } from "@/components/stat-card"
 import { ImprimirBoton } from "@/components/imprimir-boton"
 import { Reveal } from "@/components/ui/reveal"
 import { DashboardGerencial } from "@/components/dashboard-gerencial"
+import { ResumenHoy } from "@/components/resumen-hoy"
+import { CorrerTareasBoton } from "@/components/correr-tareas-boton"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { analiticaGerencial } from "@/lib/data/analitica"
+import { resumenDelDia, resumenesRecientes } from "@/lib/data/tareas"
 
 export const dynamic = "force-dynamic"
 
@@ -17,7 +20,7 @@ export default async function AdminResumen() {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver el resumen." />
 
-  const a = await analiticaGerencial()
+  const [a, hoy, recientes] = await Promise.all([analiticaGerencial(), resumenDelDia(), resumenesRecientes(7)])
 
   return (
     <PortalShell roles={["admin"]}>
@@ -25,8 +28,17 @@ export default async function AdminResumen() {
         <PageHeader
           titulo="Resumen del negocio"
           descripcion="Dashboards gerenciales de la operación: tendencias, volúmenes y satisfacción."
-          acciones={<ImprimirBoton />}
+          acciones={
+            <div className="flex flex-wrap items-center gap-2">
+              <CorrerTareasBoton />
+              <ImprimirBoton />
+            </div>
+          }
         />
+
+        <div className="mt-6">
+          <Reveal><ResumenHoy hoy={hoy} recientes={recientes} /></Reveal>
+        </div>
 
         {/* KPIs destacados */}
         <Reveal className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
