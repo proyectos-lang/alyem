@@ -248,6 +248,44 @@ export async function avanzarEtapa(gestionId: string) {
   revalidatePath(`/g/${gestionId}`)
 }
 
+// Devuelve la operación a la etapa ANTERIOR del flujo. Solo administradores.
+// Registra un evento de estado (preserva el historial; no borra eventos previos).
+export async function devolverEtapa(gestionId: string, motivo?: string) {
+  const usuario = await getUsuarioActivo()
+  if (!usuario || usuario.rol !== "admin") {
+    throw new Error("Solo un administrador puede devolver una etapa.")
+  }
+  const sb = getSupabase()
+
+  const { data: estadosData } = await sb
+    .from("estados_catalogo")
+    .select("id, nombre, orden, tipo")
+    .eq("activo", true)
+    .in("tipo", ["normal", "final"])
+    .order("orden")
+  const flujo = estadosData ?? []
+  if (flujo.length === 0) throw new Error("No hay estados configurados.")
+
+  const { data: actual } = await sb.from("v_gestion_estado_actual").select("estado_id").eq("gestion_id", gestionId).maybeSingle()
+  const idx = actual?.estado_id ? flujo.findIndex((e) => e.id === actual.estado_id) : -1
+  if (idx <= 0) throw new Error("La operación ya está en la primera etapa; no se puede devolver.")
+  const anterior = flujo[idx - 1]
+
+  const nota = (motivo ?? "").trim()
+  await sb.from("eventos").insert({
+    gestion_id: gestionId,
+    tipo: "estado",
+    estado_id: anterior.id,
+    observacion: nota
+      ? `Devolución de etapa a “${anterior.nombre}”. Motivo: ${nota}`
+      : `Devolución de etapa a “${anterior.nombre}”.`,
+    interno: true, // corrección administrativa: no se notifica al cliente
+    usuario_id: usuario.id,
+  })
+
+  revalidatePath(`/g/${gestionId}`)
+}
+
 // Edición genérica de datos del proceso (formularios por paso envían su subconjunto).
 const TEXT = [
   "consignatario", "contenedores", "naviera", "proveedor", "numero_factura", "termino_compra",

@@ -18,6 +18,7 @@ import { StarDisplay } from "@/components/star-rating"
 import { DIMENSIONES } from "@/lib/satisfaccion"
 import { DiasLibresBadge } from "@/components/dias-libres-badge"
 import { AvanzarEtapa } from "@/components/avanzar-etapa"
+import { DevolverEtapa } from "@/components/devolver-etapa"
 import { MarcarRecibido } from "@/components/marcar-recibido"
 import { CopiarTrack } from "@/components/copiar-track"
 import { Breadcrumb } from "@/components/breadcrumb"
@@ -68,6 +69,11 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
   const agencia = esAgencia(usuario.rol)
   const docsPendientes = requeridos.filter((r) => !r.cumplido).length
   const esFinal = g.estado?.tipo === "final" || g.estado?.tipo === "cancelada"
+
+  // ¿Se puede devolver la etapa? Solo si hay una etapa anterior en el flujo (normal/final).
+  const flujoNormal = estados.filter((e) => e.tipo === "normal" || e.tipo === "final").sort((a, b) => a.orden - b.orden)
+  const idxActual = flujoNormal.findIndex((e) => e.id === g.estado?.estado_id)
+  const puedeDevolver = idxActual > 0
 
   const enCierre = (g.estado?.nombre ?? "").startsWith("Cierre") || esFinal
   const puedeConfirmar = usuario.rol === "cliente" && !g.recibido && !!g.estado &&
@@ -128,6 +134,9 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                     puedeAceptar={puede(usuario, PERMISOS.GESTION_ACEPTAR)}
                     puedeRegistrar={puede(usuario, PERMISOS.EVENTO_REGISTRAR)}
                   />
+                )}
+                {agencia && usuario.rol === "admin" && (
+                  <DevolverEtapa gestionId={g.id} deshabilitado={!puedeDevolver} />
                 )}
                 {agencia && puede(usuario, PERMISOS.EVENTO_REGISTRAR) && (
                   <AvanzarEtapa gestionId={g.id} deshabilitado={esFinal} />
