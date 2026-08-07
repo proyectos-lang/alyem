@@ -4,7 +4,9 @@ import type { Usuario } from "./types"
 
 export const COOKIE_USUARIO = "demo_user_id"
 
-const SELECT_USUARIO = "*, empresa:empresas(id, nombre)"
+// Hint explícito del FK (empresa_id): existe más de una relación usuarios↔empresas
+// desde que operador_empresas referencia ambas tablas, así que hay que desambiguar.
+const SELECT_USUARIO = "*, empresa:empresas!empresa_id(id, nombre)"
 
 // Usuario autenticado: cookie demo_user_id → usuario válido y activo, o null.
 // (Sin fallback: si no hay sesión válida, el usuario no está autenticado.)

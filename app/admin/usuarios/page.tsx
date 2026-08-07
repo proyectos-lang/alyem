@@ -24,7 +24,7 @@ const ROL_VARIANT: Record<Rol, "default" | "secondary" | "warning"> = {
 export default async function UsuariosPage() {
   const sb = getSupabase()
   const [{ data: us }, { data: emp }, { data: asig }] = await Promise.all([
-    sb.from("usuarios").select("*, empresa:empresas(id, nombre)").order("rol").order("nombre"),
+    sb.from("usuarios").select("*, empresa:empresas!empresa_id(id, nombre)").order("rol").order("nombre"),
     sb.from("empresas").select("*").eq("activo", true).order("nombre"),
     sb.from("operador_empresas").select("usuario_id, empresa_id"),
   ])
