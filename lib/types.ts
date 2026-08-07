@@ -172,6 +172,7 @@ export interface Documento {
   storage_path: string
   estado: EstadoDocumento
   motivo_rechazo: string | null
+  observaciones: string | null
   version: number
   reemplaza_a: string | null
   subido_por: string | null

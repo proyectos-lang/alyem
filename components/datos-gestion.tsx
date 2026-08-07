@@ -30,6 +30,7 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
     <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
       <dl>
         <Dato label="Referencia" valor={g.referencia} />
+        <Dato label="Número de BL / doc. transporte" valor={g.carta_porte} />
         <Dato label="Tipo de operación" valor={TIPO_OP[g.tipo_operacion]} />
         <Dato label="Aduana de ingreso" valor={g.aduana ? `${g.aduana.nombre} (${g.aduana.codigo})` : null} />
         <Dato label="Régimen aduanero" valor={g.regimen?.nombre} />
@@ -44,7 +45,7 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
         <Dato label="Descripción de la carga" valor={g.descripcion_carga} />
         <Dato label="Origen de la carga" valor={g.origen_carga} />
         <Dato label="Marca" valor={g.marca} />
-        <Dato label="Modelo" valor={g.modelo} />
+        <Dato label="Modelo(s)" valor={g.modelo ? <span className="whitespace-pre-line">{g.modelo}</span> : null} />
         <Dato label="Término de compra" valor={g.termino_compra} />
         <Dato label="Forma de pago" valor={g.forma_pago ? FORMA_PAGO[g.forma_pago] : null} />
         <Dato label="Valor FOB" valor={num(g.valor_fob)} />

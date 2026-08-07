@@ -133,7 +133,10 @@ export async function DocumentosPanel({
           ) : (
             <ul className="flex flex-col gap-2">
               {documentos.map((d) => {
-                const badge = ESTADO_BADGE[d.estado]
+                const badge =
+                  d.estado === "aceptado" && d.observaciones
+                    ? { variant: "warning" as const, label: "Aceptado c/ observaciones", icon: CheckCircle2 }
+                    : ESTADO_BADGE[d.estado]
                 const url = urls.get(d.id)
                 return (
                   <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3">
@@ -147,6 +150,9 @@ export async function DocumentosPanel({
                       </p>
                       {d.estado === "rechazado" && d.motivo_rechazo && (
                         <p className="mt-0.5 text-xs text-destructive">Motivo: {d.motivo_rechazo}</p>
+                      )}
+                      {d.observaciones && (
+                        <p className="mt-0.5 text-xs text-amber-600">Observaciones: {d.observaciones}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-2">

@@ -29,6 +29,13 @@ async function siguienteReferencia(): Promise<string> {
   return `GES-${anio}-${String((count ?? 0) + 1).padStart(4, "0")}`
 }
 
+// ¿Ya existe una operación con esa referencia exacta? (para usar el BL como referencia).
+async function existeReferencia(ref: string): Promise<boolean> {
+  const sb = getSupabase()
+  const { count } = await sb.from("gestiones").select("id", { count: "exact", head: true }).eq("referencia", ref)
+  return (count ?? 0) > 0
+}
+
 // Sube los archivos adjuntos de un formulario (inputs 'archivo_<tipoDocumentoId>').
 async function subirAdjuntosDeForm(form: FormData, gestionId: string, usuarioId: string, esAgencia: boolean) {
   const sb = getSupabase()
@@ -75,7 +82,10 @@ export async function crearGestion(form: FormData): Promise<string> {
     consignatario = (emp?.nombre as string) ?? null
   }
 
-  const referencia = await siguienteReferencia()
+  // Referencia = número de BL (si está disponible y es único); si no, correlativo GES-YYYY-NNNN.
+  const bl = ((form.get("numero_bl") as string) || "").trim()
+  const referencia = bl && !(await existeReferencia(bl)) ? bl : await siguienteReferencia()
+
   const g = {
     referencia,
     empresa_id: empresaId,
@@ -89,6 +99,7 @@ export async function crearGestion(form: FormData): Promise<string> {
     regimen_id: (form.get("regimen_id") as string) || null,
     proveedor: (form.get("proveedor") as string) || null,
     numero_factura: (form.get("numero_factura") as string) || null,
+    carta_porte: bl || null,
     proviene_panama: form.get("proviene_panama") === "on" || form.get("proviene_panama") === "true",
     descripcion_carga: (form.get("descripcion_carga") as string) || null,
   }
@@ -261,7 +272,20 @@ export async function editarDatosGestion(form: FormData) {
   for (const c of ENUM) if (form.has(c)) patch[c] = (form.get(c) as string) || null
   for (const c of TRISTATE) if (form.has(c)) { const v = form.get(c) as string; patch[c] = v === "si" ? true : v === "no" ? false : null }
 
+  // Número de BL: se guarda en carta_porte.
+  const bl = form.has("numero_bl") ? ((form.get("numero_bl") as string) || "").trim() : ""
+  if (form.has("numero_bl")) patch.carta_porte = bl || null
+
   if (Object.keys(patch).length > 0) await sb.from("gestiones").update(patch).eq("id", gestionId)
+
+  // Si llega el BL y la referencia aún es el correlativo temporal (GES-…), la reemplaza por el BL.
+  if (bl) {
+    const { data: g } = await sb.from("gestiones").select("referencia").eq("id", gestionId).maybeSingle()
+    const refActual = (g as { referencia?: string } | null)?.referencia ?? ""
+    if (refActual.startsWith("GES-") && refActual !== bl && !(await existeReferencia(bl))) {
+      await sb.from("gestiones").update({ referencia: bl }).eq("id", gestionId)
+    }
+  }
 
   // Si se registró el canal selectivo, deja un evento con su color.
   if (form.has("canal_selectivo") && form.get("canal_selectivo")) {

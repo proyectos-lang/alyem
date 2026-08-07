@@ -113,23 +113,25 @@ export async function eliminarRequerido(id: string, gestionId: string) {
   revalidatePath(`/g/${gestionId}`)
 }
 
-// Operador acepta o rechaza un documento.
-export async function revisarDocumento(id: string, estado: "aceptado" | "rechazado", motivo?: string) {
+// Alyem acepta un documento (opcionalmente con observaciones: si falta info o
+// hay algo que corregir). Ya no se rechazan documentos.
+export async function revisarDocumento(id: string, observaciones?: string) {
   const usuario = await getUsuarioActivo()
   exigir(usuario, PERMISOS.DOCUMENTO_REVISAR)
   const sb = getSupabase()
 
-  await sb.from("documentos").update({ estado, motivo_rechazo: estado === "rechazado" ? (motivo ?? null) : null }).eq("id", id)
+  const obs = observaciones?.trim() || null
+  await sb.from("documentos").update({ estado: "aceptado", observaciones: obs, motivo_rechazo: null }).eq("id", id)
 
-  const { data: doc } = await sb.from("documentos").select("gestion_id, nombre_archivo").eq("id", id).single()
+  const { data: doc } = await sb.from("documentos").select("gestion_id").eq("id", id).single()
   if (doc) {
-    if (estado === "rechazado") {
+    if (obs) {
       const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", doc.gestion_id).single()
       if (g)
         await notificarEmpresa(
           g.empresa_id,
-          "documento_rechazado",
-          `Documento rechazado en ${g.referencia}: ${motivo ?? "revisar"}.`,
+          "documento_observaciones",
+          `Documento aceptado con observaciones en ${g.referencia}: ${obs}`,
           doc.gestion_id,
         )
     }

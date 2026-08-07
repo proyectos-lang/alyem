@@ -70,6 +70,10 @@ export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; ad
           </div>
         )}
         <div className="flex flex-col gap-1.5">
+          <Label>Número de BL / doc. de transporte</Label>
+          <Input name="numero_bl" defaultValue={g.carta_porte ?? ""} placeholder="Se usará como referencia" />
+        </div>
+        <div className="flex flex-col gap-1.5">
           <Label>Naviera</Label>
           <Input name="naviera" defaultValue={g.naviera ?? ""} />
         </div>
