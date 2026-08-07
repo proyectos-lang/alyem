@@ -24,9 +24,32 @@ export async function guardarEmpresa(form: FormData) {
     activo: form.get("activo") === "on" || form.get("activo") === "true",
   }
   if (!fila.nombre) throw new Error("El nombre es obligatorio.")
-  if (id) await sb.from("empresas").update(fila).eq("id", id)
-  else await sb.from("empresas").insert({ ...fila, activo: true })
+
+  let empresaId = id
+  if (id) {
+    await sb.from("empresas").update(fila).eq("id", id)
+  } else {
+    const { data, error } = await sb.from("empresas").insert({ ...fila, activo: true }).select("id").single()
+    if (error) throw new Error(error.message)
+    empresaId = data.id as string
+  }
+
+  // Operadores asignados a esta empresa. Sincroniza operador_empresas por empresa:
+  // borra las asignaciones de esta empresa e inserta las de los operadores marcados.
+  if (empresaId) {
+    const operadorIds = [...new Set(form.getAll("operador_ids").map(String))].filter(Boolean)
+    try {
+      await sb.from("operador_empresas").delete().eq("empresa_id", empresaId)
+      if (operadorIds.length) {
+        await sb.from("operador_empresas").insert(operadorIds.map((usuario_id) => ({ usuario_id, empresa_id: empresaId })))
+      }
+    } catch {
+      /* tabla ausente (pre-migración) */
+    }
+  }
+
   revalidatePath("/admin/empresas")
+  revalidatePath("/admin/usuarios")
 }
 
 // --- Usuarios ---------------------------------------------------------------

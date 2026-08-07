@@ -15,14 +15,27 @@ export const dynamic = "force-dynamic"
 
 export default async function EmpresasPage() {
   const sb = getSupabase()
-  const { data } = await sb.from("empresas").select("*").order("nombre")
+  const [{ data }, { data: us }, { data: operadores }, { data: asig }] = await Promise.all([
+    sb.from("empresas").select("*").order("nombre"),
+    sb.from("usuarios").select("empresa_id"),
+    sb.from("usuarios").select("id, nombre").eq("rol", "operador").eq("activo", true).order("nombre"),
+    sb.from("operador_empresas").select("usuario_id, empresa_id"),
+  ])
   const empresas = (data as Empresa[]) ?? []
+  const listaOperadores = (operadores as { id: string; nombre: string }[]) ?? []
 
-  // Conteo de usuarios por empresa.
-  const { data: us } = await sb.from("usuarios").select("empresa_id")
+  // Conteo de usuarios cliente por empresa.
   const conteo = new Map<string, number>()
   for (const u of (us as { empresa_id: string | null }[]) ?? []) {
     if (u.empresa_id) conteo.set(u.empresa_id, (conteo.get(u.empresa_id) ?? 0) + 1)
+  }
+
+  // Operadores asignados por empresa (empresa_id → [usuario_id]).
+  const opsPorEmpresa = new Map<string, string[]>()
+  for (const a of (asig as { usuario_id: string; empresa_id: string }[]) ?? []) {
+    const arr = opsPorEmpresa.get(a.empresa_id) ?? []
+    arr.push(a.usuario_id)
+    opsPorEmpresa.set(a.empresa_id, arr)
   }
 
   return (
@@ -33,7 +46,7 @@ export default async function EmpresasPage() {
           descripcion="Alta y edición de empresas importadoras/exportadoras."
           acciones={
             <Modal title="Nueva empresa" trigger={<Button><Plus /> Nueva empresa</Button>}>
-              <EmpresaForm />
+              <EmpresaForm operadores={listaOperadores} />
             </Modal>
           }
         />
@@ -46,6 +59,7 @@ export default async function EmpresasPage() {
                 <TableHead>ID fiscal</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Usuarios</TableHead>
+                <TableHead>Operadores</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Alta</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -58,6 +72,12 @@ export default async function EmpresasPage() {
                   <TableCell className="text-muted-foreground">{e.id_fiscal ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.contacto ?? "—"}</TableCell>
                   <TableCell>{conteo.get(e.id) ?? 0}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {(() => {
+                      const n = opsPorEmpresa.get(e.id)?.length ?? 0
+                      return n === 0 ? "—" : `${n} operador${n === 1 ? "" : "es"}`
+                    })()}
+                  </TableCell>
                   <TableCell>
                     {e.activo ? <Badge variant="success">Activa</Badge> : <Badge variant="muted">Inactiva</Badge>}
                   </TableCell>
@@ -71,14 +91,14 @@ export default async function EmpresasPage() {
                         </Button>
                       }
                     >
-                      <EmpresaForm empresa={e} />
+                      <EmpresaForm empresa={e} operadores={listaOperadores} asignados={opsPorEmpresa.get(e.id) ?? []} />
                     </Modal>
                   </TableCell>
                 </TableRow>
               ))}
               {empresas.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                     No hay empresas todavía.
                   </TableCell>
                 </TableRow>
