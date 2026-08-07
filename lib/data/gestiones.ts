@@ -1,4 +1,5 @@
 import { getSupabase } from "../supabase/server"
+import { empresasVisibles } from "./asignaciones"
 import type {
   Calificacion,
   Documento,
@@ -43,17 +44,20 @@ export interface GestionConEstado extends Gestion {
   estado?: EstadoDerivado
 }
 
-// Lista de operaciones visibles para el usuario (aislamiento por empresa si es cliente).
+// Lista de operaciones visibles para el usuario. Aislamiento por empresa:
+// cliente → su empresa; operador → sus clientes asignados (o todas si no tiene);
+// admin → todas.
 export async function listarGestiones(
-  usuario: Pick<Usuario, "rol" | "empresa_id">,
+  usuario: Pick<Usuario, "id" | "rol" | "empresa_id">,
   opts: { texto?: string; operadorId?: string } = {},
 ): Promise<GestionConEstado[]> {
   const sb = getSupabase()
   let q = sb.from("gestiones").select(SEL_GESTION).order("created_at", { ascending: false })
 
-  if (usuario.rol === "cliente") {
-    if (!usuario.empresa_id) return []
-    q = q.eq("empresa_id", usuario.empresa_id)
+  const vis = await empresasVisibles(usuario)
+  if (vis) {
+    if (vis.length === 0) return []
+    q = q.in("empresa_id", vis)
   }
   if (opts.operadorId) q = q.eq("operador_id", opts.operadorId)
 
@@ -82,13 +86,14 @@ export async function listarGestiones(
 // Detalle completo de una operación (con verificación de aislamiento).
 export async function getGestion(
   id: string,
-  usuario: Pick<Usuario, "rol" | "empresa_id">,
+  usuario: Pick<Usuario, "id" | "rol" | "empresa_id">,
 ): Promise<GestionConEstado | null> {
   const sb = getSupabase()
   const { data } = await sb.from("gestiones").select(SEL_GESTION).eq("id", id).maybeSingle()
   const g = data as GestionConEstado | null
   if (!g) return null
-  if (usuario.rol === "cliente" && g.empresa_id !== usuario.empresa_id) return null
+  const vis = await empresasVisibles(usuario)
+  if (vis && !vis.includes(g.empresa_id)) return null
   const estados = await estadosActuales([g.id])
   g.estado = estados.get(g.id)
   // Régimen aduanero (resuelto aparte para no depender del esquema en el SELECT central).

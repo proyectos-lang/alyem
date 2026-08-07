@@ -55,14 +55,32 @@ export async function guardarUsuario(form: FormData) {
   // Contraseña: obligatoria al crear; en edición solo se actualiza si se ingresa.
   const password = String(form.get("password") ?? "").trim()
 
+  let usuarioId = id
   if (id) {
     if (password) fila.password = password
     await sb.from("usuarios").update(fila).eq("id", id)
   } else {
     if (!password) throw new Error("La contraseña es obligatoria al crear un usuario.")
     fila.password = password
-    await sb.from("usuarios").insert(fila)
+    const { data, error } = await sb.from("usuarios").insert(fila).select("id").single()
+    if (error) throw new Error(error.message)
+    usuarioId = data.id as string
   }
+
+  // Clientes asignados (solo operador). Sincroniza operador_empresas: borra e inserta.
+  // Para otros roles, limpia cualquier asignación previa.
+  if (usuarioId) {
+    const clienteIds = rol === "operador" ? [...new Set(form.getAll("cliente_ids").map(String))] : []
+    try {
+      await sb.from("operador_empresas").delete().eq("usuario_id", usuarioId)
+      if (clienteIds.length) {
+        await sb.from("operador_empresas").insert(clienteIds.map((empresa_id) => ({ usuario_id: usuarioId, empresa_id })))
+      }
+    } catch {
+      /* tabla ausente (pre-migración) */
+    }
+  }
+
   revalidatePath("/admin/usuarios")
 }
 

@@ -7,6 +7,7 @@ import { getSupabase } from "@/lib/supabase/server"
 import { listarAduanas } from "@/lib/data/aduanas"
 import { getTiposDocumento } from "@/lib/data/catalogos"
 import { listarRegimenes } from "@/lib/data/regimenes"
+import { empresasVisibles } from "@/lib/data/asignaciones"
 import type { Empresa } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -17,8 +18,12 @@ export default async function NuevaGestionAgencia() {
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para crear operaciones." />
 
   const sb = getSupabase()
+  // Alcance por empresa: el operador restringido solo puede crear a nombre de sus clientes.
+  const vis = await empresasVisibles(usuario)
+  let empQ = sb.from("empresas").select("*").eq("activo", true).order("nombre")
+  if (vis) empQ = empQ.in("id", vis)
   const [{ data: emp }, aduanas, tipos, regimenes] = await Promise.all([
-    sb.from("empresas").select("*").eq("activo", true).order("nombre"),
+    vis && vis.length === 0 ? Promise.resolve({ data: [] }) : empQ,
     listarAduanas(true),
     getTiposDocumento(),
     listarRegimenes(),

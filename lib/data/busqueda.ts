@@ -1,5 +1,6 @@
 import { getSupabase } from "../supabase/server"
 import { esAgencia } from "../permisos"
+import { empresasVisibles } from "./asignaciones"
 import type { Usuario } from "../types"
 
 export interface ResultadoBusqueda {
@@ -13,7 +14,7 @@ const VACIO: ResultadoBusqueda = { operaciones: [], clientes: [], documentos: []
 // Búsqueda global cross-entidad (operaciones, clientes, documentos) con
 // aislamiento por empresa para el cliente.
 export async function busquedaGlobal(
-  usuario: Pick<Usuario, "rol" | "empresa_id">,
+  usuario: Pick<Usuario, "id" | "rol" | "empresa_id">,
   texto: string,
 ): Promise<ResultadoBusqueda> {
   const t = texto.trim()
@@ -21,8 +22,10 @@ export async function busquedaGlobal(
   const like = `%${t}%`
   const sb = getSupabase()
   const agencia = esAgencia(usuario.rol)
-  const esCliente = usuario.rol === "cliente"
-  if (esCliente && !usuario.empresa_id) return VACIO
+
+  // Alcance por empresa (null = todas). Si es lista vacía, no ve nada.
+  const vis = await empresasVisibles(usuario)
+  if (vis && vis.length === 0) return VACIO
 
   // 1) Operaciones
   let qg = sb
@@ -31,12 +34,17 @@ export async function busquedaGlobal(
     .or([`referencia.ilike.${like}`, `numero_factura.ilike.${like}`, `contenedores.ilike.${like}`, `proveedor.ilike.${like}`].join(","))
     .order("created_at", { ascending: false })
     .limit(8)
-  if (esCliente) qg = qg.eq("empresa_id", usuario.empresa_id)
+  if (vis) qg = qg.in("empresa_id", vis)
 
-  // 2) Clientes (solo agencia)
-  const qc = agencia
-    ? sb.from("empresas").select("id, nombre, id_fiscal").or(`nombre.ilike.${like},id_fiscal.ilike.${like}`).order("nombre").limit(8)
-    : Promise.resolve({ data: [] as { id: string; nombre: string; id_fiscal: string | null }[] })
+  // 2) Clientes (solo agencia; operador restringido → solo sus clientes)
+  let qc: PromiseLike<{ data: { id: string; nombre: string; id_fiscal: string | null }[] | null }>
+  if (agencia) {
+    let e = sb.from("empresas").select("id, nombre, id_fiscal").or(`nombre.ilike.${like},id_fiscal.ilike.${like}`).order("nombre").limit(8)
+    if (vis) e = e.in("id", vis)
+    qc = e
+  } else {
+    qc = Promise.resolve({ data: [] })
+  }
 
   // 3) Documentos por nombre de archivo
   let qd = sb
@@ -45,7 +53,7 @@ export async function busquedaGlobal(
     .ilike("nombre_archivo", like)
     .order("created_at", { ascending: false })
     .limit(8)
-  if (esCliente) qd = qd.eq("gestion.empresa_id", usuario.empresa_id)
+  if (vis) qd = qd.in("gestion.empresa_id", vis)
 
   const [g, c, d] = await Promise.all([qg, qc, qd])
 

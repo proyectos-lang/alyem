@@ -4,7 +4,7 @@ import { diasEnEtapa, alertasDe, tiemposEntreProcesos } from "./metricas"
 import { predecirRetrasos } from "./prediccion"
 import { getConfig } from "../config"
 
-const ADMIN_VIRTUAL = { rol: "admin" as const, empresa_id: null }
+const ADMIN_VIRTUAL = { id: "", rol: "admin" as const, empresa_id: null }
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
 async function idsAdmins(): Promise<string[]> {

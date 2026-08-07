@@ -7,6 +7,7 @@ import { EstadoChip } from "@/components/estado-chip"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { importacionesDeEmpresa, nombreEmpresa } from "@/lib/data/documentos"
+import { empresasVisibles } from "@/lib/data/asignaciones"
 import { fecha } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
@@ -23,7 +24,9 @@ export default async function DocumentosCliente({
   const { empresaId } = await params
   const { q } = await searchParams
 
-  const nombre = await nombreEmpresa(empresaId)
+  // Un operador restringido no puede abrir carpetas de clientes que no tiene asignados.
+  const vis = await empresasVisibles(usuario)
+  const nombre = vis && !vis.includes(empresaId) ? null : await nombreEmpresa(empresaId)
   if (!nombre) {
     return (
       <PortalShell roles={["operador", "admin"]}>

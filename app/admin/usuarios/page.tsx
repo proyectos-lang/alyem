@@ -23,12 +23,21 @@ const ROL_VARIANT: Record<Rol, "default" | "secondary" | "warning"> = {
 
 export default async function UsuariosPage() {
   const sb = getSupabase()
-  const [{ data: us }, { data: emp }] = await Promise.all([
+  const [{ data: us }, { data: emp }, { data: asig }] = await Promise.all([
     sb.from("usuarios").select("*, empresa:empresas(id, nombre)").order("rol").order("nombre"),
     sb.from("empresas").select("*").eq("activo", true).order("nombre"),
+    sb.from("operador_empresas").select("usuario_id, empresa_id"),
   ])
   const usuarios = (us as Usuario[]) ?? []
   const empresas = (emp as Empresa[]) ?? []
+
+  // Mapa usuario_id → [empresa_id] con los clientes asignados a cada operador.
+  const asignadosPorUsuario = new Map<string, string[]>()
+  for (const a of (asig as { usuario_id: string; empresa_id: string }[]) ?? []) {
+    const arr = asignadosPorUsuario.get(a.usuario_id) ?? []
+    arr.push(a.empresa_id)
+    asignadosPorUsuario.set(a.usuario_id, arr)
+  }
 
   return (
     <PortalShell roles={["admin"]}>
@@ -64,7 +73,14 @@ export default async function UsuariosPage() {
                   <TableCell>
                     <Badge variant={ROL_VARIANT[u.rol]}>{ROL_LABEL[u.rol]}</Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{u.empresa?.nombre ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {u.rol === "operador"
+                      ? (() => {
+                          const n = asignadosPorUsuario.get(u.id)?.length ?? 0
+                          return n === 0 ? "Todos los clientes" : `${n} cliente${n === 1 ? "" : "s"}`
+                        })()
+                      : u.empresa?.nombre ?? "—"}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {u.permisos
                       ? `${u.permisos.length} personalizados`
@@ -84,7 +100,7 @@ export default async function UsuariosPage() {
                           </Button>
                         }
                       >
-                        <UsuarioForm usuario={u} empresas={empresas} />
+                        <UsuarioForm usuario={u} empresas={empresas} asignados={asignadosPorUsuario.get(u.id) ?? []} />
                       </Modal>
                       <UsuarioActivoToggle id={u.id} activo={u.activo} />
                     </div>

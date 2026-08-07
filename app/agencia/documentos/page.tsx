@@ -13,7 +13,7 @@ export default async function DocumentosAgencia({ searchParams }: { searchParams
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver los documentos." />
   const { q } = await searchParams
 
-  let carpetas = await carpetasClientes()
+  let carpetas = await carpetasClientes(usuario)
   if (q?.trim()) {
     const t = q.trim().toLowerCase()
     carpetas = carpetas.filter((c) => c.nombre.toLowerCase().includes(t))

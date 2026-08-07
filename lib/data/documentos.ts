@@ -1,5 +1,7 @@
 import { getSupabase } from "../supabase/server"
 import { estadosActuales, type EstadoDerivado } from "./gestiones"
+import { empresasVisibles } from "./asignaciones"
+import type { Usuario } from "../types"
 
 // Datos del módulo "Documentos" (explorador tipo carpetas):
 // Cliente (carpeta) → Importación (subcarpeta) → Documentos.
@@ -12,11 +14,20 @@ export interface CarpetaCliente {
 }
 
 // Carpetas de primer nivel para la agencia: un cliente por carpeta, con conteos.
-export async function carpetasClientes(): Promise<CarpetaCliente[]> {
+// Restringido a los clientes visibles del usuario (operador → sus asignados).
+export async function carpetasClientes(usuario: Pick<Usuario, "id" | "rol" | "empresa_id">): Promise<CarpetaCliente[]> {
   const sb = getSupabase()
+  const vis = await empresasVisibles(usuario)
+  if (vis && vis.length === 0) return []
+
+  let empQ = sb.from("empresas").select("id, nombre").order("nombre")
+  if (vis) empQ = empQ.in("id", vis)
+  let gesQ = sb.from("gestiones").select("id, empresa_id")
+  if (vis) gesQ = gesQ.in("empresa_id", vis)
+
   const [{ data: empresas }, { data: gestiones }, { data: docs }] = await Promise.all([
-    sb.from("empresas").select("id, nombre").order("nombre"),
-    sb.from("gestiones").select("id, empresa_id"),
+    empQ,
+    gesQ,
     sb.from("documentos").select("gestion_id"),
   ])
 

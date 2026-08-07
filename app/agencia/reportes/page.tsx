@@ -8,9 +8,8 @@ import { usuarioActivoSeguro } from "@/lib/portal"
 import { filasReporte } from "@/lib/data/reportes"
 import { listarDefiniciones } from "@/lib/data/reportes-guardados"
 import { listarRegimenes } from "@/lib/data/regimenes"
+import { empresasParaAgencia } from "@/lib/data/asignaciones"
 import { COLUMNAS_DEFAULT } from "@/lib/reportes"
-import { getSupabase } from "@/lib/supabase/server"
-import type { Empresa } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -21,9 +20,8 @@ export default async function ReportesAgencia({ searchParams }: { searchParams: 
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver reportes." />
   const sp = await searchParams
 
-  const sb = getSupabase()
-  const { data: empData } = await sb.from("empresas").select("id, nombre").eq("activo", true).order("nombre")
-  const empresas = (empData as Pick<Empresa, "id" | "nombre">[]) ?? []
+  // Selector de cliente acotado al alcance del usuario (operador → sus asignados).
+  const empresas = await empresasParaAgencia(usuario)
   const cols = sp.cols?.split(",").filter(Boolean) ?? COLUMNAS_DEFAULT
   const [filas, definiciones, regimenes] = await Promise.all([
     filasReporte(usuario, {

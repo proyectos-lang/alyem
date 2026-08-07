@@ -11,7 +11,15 @@ import { guardarUsuario } from "@/lib/actions/admin"
 import { PERMISOS_META, permisosDefault } from "@/lib/permisos"
 import type { Empresa, Rol, Usuario } from "@/lib/types"
 
-export function UsuarioForm({ usuario, empresas }: { usuario?: Usuario; empresas: Empresa[] }) {
+export function UsuarioForm({
+  usuario,
+  empresas,
+  asignados = [],
+}: {
+  usuario?: Usuario
+  empresas: Empresa[]
+  asignados?: string[]
+}) {
   const router = useRouter()
   const close = useModalClose()
   const [pending, startTransition] = useTransition()
@@ -22,6 +30,16 @@ export function UsuarioForm({ usuario, empresas }: { usuario?: Usuario; empresas
   const [permisos, setPermisos] = useState<Set<string>>(
     new Set(usuario?.permisos ?? permisosDefault(usuario?.rol ?? "cliente")),
   )
+  const [clientes, setClientes] = useState<Set<string>>(new Set(asignados))
+
+  function toggleCliente(id: string) {
+    setClientes((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const defaultsDelRol = useMemo(() => new Set(permisosDefault(rol)), [rol])
   const efectivos = usarDefaults ? defaultsDelRol : permisos
@@ -47,6 +65,8 @@ export function UsuarioForm({ usuario, empresas }: { usuario?: Usuario; empresas
     fd.set("usar_defaults", usarDefaults ? "on" : "off")
     fd.delete("permisos")
     if (!usarDefaults) for (const p of permisos) fd.append("permisos", p)
+    fd.delete("cliente_ids")
+    if (rol === "operador") for (const id of clientes) fd.append("cliente_ids", id)
     startTransition(async () => {
       try {
         await guardarUsuario(fd)
@@ -110,6 +130,33 @@ export function UsuarioForm({ usuario, empresas }: { usuario?: Usuario; empresas
           </div>
         )}
       </div>
+
+      {rol === "operador" && (
+        <div className="rounded-lg border border-border p-3">
+          <p className="text-sm font-medium">Clientes asignados</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Este operador solo verá las solicitudes y trámites de los clientes marcados.{" "}
+            <span className="font-medium">Vacío = ve todas las operaciones.</span>
+          </p>
+          {empresas.length === 0 ? (
+            <p className="mt-3 text-xs text-muted-foreground">No hay clientes registrados todavía.</p>
+          ) : (
+            <div className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">
+              {empresas.map((e) => (
+                <label key={e.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={clientes.has(e.id)}
+                    onChange={() => toggleCliente(e.id)}
+                    className="size-4 accent-[var(--primary)]"
+                  />
+                  {e.nombre}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-lg border border-border p-3">
         <label className="flex items-center gap-2 text-sm font-medium">

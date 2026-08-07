@@ -1,5 +1,6 @@
 import { getSupabase } from "../supabase/server"
 import { estadosActuales, type GestionConEstado } from "./gestiones"
+import { empresasVisibles } from "./asignaciones"
 import { fecha, fechaHora } from "../format"
 import type { Usuario } from "../types"
 
@@ -22,21 +23,22 @@ export interface FilaReporte extends GestionConEstado {
 const SEL =
   "*, empresa:empresas(id, nombre), aduana:aduanas(id, nombre, codigo)"
 
-// Filas para el reporte, respetando aislamiento por empresa (cliente).
+// Filas para el reporte, respetando el alcance por empresa (cliente / operador).
 export async function filasReporte(
-  usuario: Pick<Usuario, "rol" | "empresa_id">,
+  usuario: Pick<Usuario, "id" | "rol" | "empresa_id">,
   f: FiltrosReporte,
 ): Promise<FilaReporte[]> {
   const sb = getSupabase()
   let q = sb.from("gestiones").select(SEL).order("created_at", { ascending: false })
 
-  // Aislamiento: el cliente siempre ve solo su empresa.
-  if (usuario.rol === "cliente") {
-    if (!usuario.empresa_id) return []
-    q = q.eq("empresa_id", usuario.empresa_id)
-  } else if (f.empresaId) {
-    q = q.eq("empresa_id", f.empresaId)
+  // Alcance por empresa (cliente = su empresa, operador = sus clientes asignados).
+  const vis = await empresasVisibles(usuario)
+  if (vis) {
+    if (vis.length === 0) return []
+    q = q.in("empresa_id", vis)
   }
+  // Filtro opcional por empresa (agencia), respetando el alcance.
+  if (f.empresaId && (!vis || vis.includes(f.empresaId))) q = q.eq("empresa_id", f.empresaId)
 
   const campo = f.base === "solicitud" ? "fecha_solicitud" : "eta"
   if (f.desde) q = q.gte(campo, f.desde)

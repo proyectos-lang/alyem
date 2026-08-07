@@ -5,6 +5,7 @@ import { getSupabase, ADJUNTOS_BUCKET } from "../supabase/server"
 import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
 import { getConfig } from "../config"
+import { empresasVisibles } from "../data/asignaciones"
 import { notificarAgencia, notificarEmpresa } from "./notificaciones"
 
 async function estadoIdPorNombre(patron: string): Promise<string | null> {
@@ -74,6 +75,12 @@ export async function crearGestion(form: FormData): Promise<string> {
   const empresaId = desdeAgencia ? ((form.get("empresa_id") as string) || null) : usuario!.empresa_id
   if (!empresaId) {
     throw new Error(desdeAgencia ? "Selecciona la empresa cliente." : "Tu usuario no está asociado a una empresa.")
+  }
+
+  // Anti-bypass: un operador restringido solo puede crear a nombre de sus clientes asignados.
+  const vis = await empresasVisibles(usuario!)
+  if (vis && !vis.includes(empresaId)) {
+    throw new Error("Ese cliente no está asignado a tu usuario.")
   }
 
   let consignatario = usuario!.empresa?.nombre ?? null
