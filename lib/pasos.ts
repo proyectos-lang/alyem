@@ -170,3 +170,71 @@ export function pasoPorNombre(nombre: string | null | undefined): Paso | undefin
   if (!nombre) return undefined
   return PASOS.find((p) => p.nombre === nombre)
 }
+
+// ---------------------------------------------------------------------------
+// Reglas de avance y de propiedad de campos por etapa.
+// Fuente única de verdad usada por la UI (botón de avance / alertas) y por el
+// servidor (guardas en avanzarEtapa y editarDatosGestion).
+// ---------------------------------------------------------------------------
+
+// Campos que NO se exigen para avanzar (observaciones, condicionales, heredados
+// o autocalculados). Ajustar aquí para relajar/endurecer la exigencia por campo.
+export const OPCIONALES_AVANCE = new Set<string>([
+  "naviera_observaciones",
+  "gatepass_observacion",
+  "forma_pago_otro",
+  "previa",
+  "descripcion_carga", // heredado del intake (Paso 1)
+  "fecha_fin_dias_libres", // se calcula solo / puede no aplicar
+])
+
+function valorCampo(gestion: unknown, name: string): unknown {
+  return (gestion as Record<string, unknown>)[name]
+}
+function tieneValor(gestion: unknown, name: string): boolean {
+  const v = valorCampo(gestion, name)
+  return v != null && v !== ""
+}
+
+// Campos requeridos de una etapa que aún están vacíos. Si la etapa tiene un
+// tristate `*_aplica` en `false`, la etapa no aplica y no se exige nada más.
+export function faltantesParaAvanzar(gestion: unknown, nombreEtapa: string | null | undefined): CampoPaso[] {
+  const paso = pasoPorNombre(nombreEtapa)
+  if (!paso) return []
+
+  const aplica = paso.campos.find((c) => c.name.endsWith("_aplica"))
+  if (aplica) {
+    const v = valorCampo(gestion, aplica.name)
+    if (v === false) return [] // la etapa no aplica
+    if (v == null || v === "") return [aplica] // falta responder si aplica
+    // v === true → se exige el resto (sigue al flujo normal)
+  }
+
+  const requeridos = paso.campos.filter((c) => !OPCIONALES_AVANCE.has(c.name))
+  return requeridos.filter((c) => !tieneValor(gestion, c.name))
+}
+
+// Mapa columna de `gestiones` → índice de etapa (0-based, orden de PASOS),
+// tomando la primera etapa que declara el campo.
+const CAMPO_ETAPA_IDX: Map<string, number> = (() => {
+  const m = new Map<string, number>()
+  PASOS.forEach((p, i) => {
+    for (const c of p.campos) if (!m.has(c.name)) m.set(c.name, i)
+  })
+  // El BL se guarda en carta_porte; comparte su etapa.
+  const cp = m.get("carta_porte")
+  if (cp != null) m.set("numero_bl", cp)
+  return m
+})()
+
+// Índice de la etapa a la que pertenece un campo, o null si es dato de
+// cabecera/intake que no pertenece a ninguna etapa (ej. tipo_operacion, regimen_id).
+export function etapaIndexDeCampo(campo: string): number | null {
+  return CAMPO_ETAPA_IDX.has(campo) ? (CAMPO_ETAPA_IDX.get(campo) as number) : null
+}
+
+// Índice de una etapa por su nombre (para comparar con etapaIndexDeCampo).
+export function etapaIndexPorNombre(nombre: string | null | undefined): number {
+  if (!nombre) return -1
+  return PASOS.findIndex((p) => p.nombre === nombre)
+}

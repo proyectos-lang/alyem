@@ -6,6 +6,7 @@ import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
 import { getConfig } from "../config"
 import { empresasVisibles } from "../data/asignaciones"
+import { faltantesParaAvanzar, etapaIndexDeCampo, etapaIndexPorNombre } from "../pasos"
 import { notificarAgencia, notificarEmpresa } from "./notificaciones"
 
 async function estadoIdPorNombre(patron: string): Promise<string | null> {
@@ -233,6 +234,16 @@ export async function avanzarEtapa(gestionId: string) {
   const siguiente = flujo[idx + 1]
   if (!siguiente) throw new Error("La operación ya está en la etapa final.")
 
+  // Solo se avanza si la etapa actual está diligenciada; si falta algún campo,
+  // se informa cuál. Aplica a todos (el admin puede saltar con "Registrar evento").
+  if (idx >= 0) {
+    const { data: g } = await sb.from("gestiones").select("*").eq("id", gestionId).maybeSingle()
+    const faltan = faltantesParaAvanzar(g, flujo[idx].nombre)
+    if (faltan.length > 0) {
+      throw new Error(`Antes de avanzar, diligencia en la pestaña: ${faltan.map((c) => c.label).join(", ")}.`)
+    }
+  }
+
   await sb.from("eventos").insert({
     gestion_id: gestionId,
     tipo: "estado",
@@ -320,6 +331,24 @@ export async function editarDatosGestion(form: FormData) {
   // Número de BL: se guarda en carta_porte.
   const bl = form.has("numero_bl") ? ((form.get("numero_bl") as string) || "").trim() : ""
   if (form.has("numero_bl")) patch.carta_porte = bl || null
+
+  // Bloqueo por rol: los operadores solo editan campos de la etapa ACTUAL o
+  // futuras; los datos de cabecera/intake y de etapas ya completadas son admin-only.
+  if (usuario!.rol !== "admin" && Object.keys(patch).length > 0) {
+    const { data: est } = await sb
+      .from("v_gestion_estado_actual")
+      .select("estado_nombre")
+      .eq("gestion_id", gestionId)
+      .maybeSingle()
+    const currentIndex = etapaIndexPorNombre((est as { estado_nombre?: string } | null)?.estado_nombre)
+    const bloqueados = Object.keys(patch).filter((campo) => {
+      const i = etapaIndexDeCampo(campo)
+      return i === null || (currentIndex >= 0 && i < currentIndex)
+    })
+    if (bloqueados.length > 0) {
+      throw new Error("Solo un administrador puede editar los datos de la operación o de etapas ya completadas.")
+    }
+  }
 
   if (Object.keys(patch).length > 0) await sb.from("gestiones").update(patch).eq("id", gestionId)
 

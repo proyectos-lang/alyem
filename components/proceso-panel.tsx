@@ -1,10 +1,11 @@
-import { Check, Circle, Pencil, ClipboardPen, FileText, CircleDot } from "lucide-react"
+import { Check, Circle, Pencil, ClipboardPen, FileText, CircleDot, Lock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/modal"
 import { PasoForm } from "@/components/paso-form"
-import { PASOS, type CampoPaso } from "@/lib/pasos"
+import { AvanzarEtapaPaso } from "@/components/avanzar-etapa-paso"
+import { PASOS, faltantesParaAvanzar, type CampoPaso } from "@/lib/pasos"
 import { fecha, fechaHora } from "@/lib/format"
 import type { Aduana, Documento, EstadoCatalogo, Gestion } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -43,6 +44,8 @@ export function ProcesoPanel({
   aduanas,
   estadoActualNombre,
   puedeEditar,
+  puedeAvanzar = false,
+  esAdmin = false,
 }: {
   gestion: Gestion
   estados: EstadoCatalogo[]
@@ -50,9 +53,12 @@ export function ProcesoPanel({
   aduanas: Aduana[]
   estadoActualNombre?: string
   puedeEditar: boolean
+  puedeAvanzar?: boolean
+  esAdmin?: boolean
 }) {
   const flujo = estados.filter((e) => e.tipo === "normal" || e.tipo === "final").sort((a, b) => a.orden - b.orden)
   const currentIndex = flujo.findIndex((e) => e.nombre === estadoActualNombre)
+  const haySiguiente = currentIndex >= 0 && currentIndex < flujo.length - 1
 
   return (
     <div className="flex flex-col gap-3">
@@ -91,17 +97,23 @@ export function ProcesoPanel({
                   </div>
                 </div>
                 {puedeEditar && paso.campos.length > 0 && (
-                  <Modal
-                    title={paso.nombre}
-                    className="max-w-2xl"
-                    trigger={
-                      <Button size="xs" variant={diligenciado ? "outline" : "default"}>
-                        {diligenciado ? <><Pencil /> Editar</> : <><ClipboardPen /> Diligenciar</>}
-                      </Button>
-                    }
-                  >
-                    <PasoForm gestion={gestion} campos={paso.campos} aduanas={aduanas} diligenciado={diligenciado} />
-                  </Modal>
+                  esAdmin || !completado ? (
+                    <Modal
+                      title={paso.nombre}
+                      className="max-w-2xl"
+                      trigger={
+                        <Button size="xs" variant={diligenciado ? "outline" : "default"}>
+                          {diligenciado ? <><Pencil /> Editar</> : <><ClipboardPen /> Diligenciar</>}
+                        </Button>
+                      }
+                    >
+                      <PasoForm gestion={gestion} campos={paso.campos} aduanas={aduanas} diligenciado={diligenciado} />
+                    </Modal>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground" title="Etapa completada: solo un administrador puede editarla">
+                      <Lock className="size-3" /> Solo administrador
+                    </span>
+                  )
                 )}
               </div>
 
@@ -124,6 +136,14 @@ export function ProcesoPanel({
                     </Badge>
                   ))}
                 </div>
+              )}
+
+              {enCurso && haySiguiente && (
+                <AvanzarEtapaPaso
+                  gestionId={gestion.id}
+                  faltantes={faltantesParaAvanzar(gestion, paso.nombre).map((c) => ({ name: c.name, label: c.label }))}
+                  puedeAvanzar={puedeAvanzar}
+                />
               )}
             </CardContent>
           </Card>

@@ -121,7 +121,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                   <Button variant="outline">Reporte PDF</Button>
                 </Link>
                 {agencia && <CopiarTrack token={g.public_token} />}
-                {agencia && puede(usuario, PERMISOS.GESTION_EDITAR) && (
+                {usuario.rol === "admin" && (
                   <Modal title="Editar datos de la operación" className="max-w-2xl" trigger={<Button variant="outline"><Pencil /> Editar</Button>}>
                     <EditarDatosForm g={g} aduanas={aduanas} regimenes={regimenes} />
                   </Modal>
@@ -213,6 +213,8 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                 aduanas={aduanas}
                 estadoActualNombre={g.estado?.nombre}
                 puedeEditar={puede(usuario, PERMISOS.GESTION_EDITAR)}
+                puedeAvanzar={agencia && puede(usuario, PERMISOS.EVENTO_REGISTRAR)}
+                esAdmin={usuario.rol === "admin"}
               />
             </TabsContent>
           )}
