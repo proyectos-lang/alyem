@@ -4,8 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/modal"
 import { PasoForm } from "@/components/paso-form"
-import { AvanzarEtapaPaso } from "@/components/avanzar-etapa-paso"
-import { PASOS, faltantesParaAvanzar, type CampoPaso } from "@/lib/pasos"
+import { PASOS, type CampoPaso } from "@/lib/pasos"
 import { fecha, fechaHora } from "@/lib/format"
 import type { Aduana, Documento, EstadoCatalogo, Gestion } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -44,7 +43,6 @@ export function ProcesoPanel({
   aduanas,
   estadoActualNombre,
   puedeEditar,
-  puedeAvanzar = false,
   esAdmin = false,
 }: {
   gestion: Gestion
@@ -53,12 +51,10 @@ export function ProcesoPanel({
   aduanas: Aduana[]
   estadoActualNombre?: string
   puedeEditar: boolean
-  puedeAvanzar?: boolean
   esAdmin?: boolean
 }) {
   const flujo = estados.filter((e) => e.tipo === "normal" || e.tipo === "final").sort((a, b) => a.orden - b.orden)
   const currentIndex = flujo.findIndex((e) => e.nombre === estadoActualNombre)
-  const haySiguiente = currentIndex >= 0 && currentIndex < flujo.length - 1
 
   return (
     <div className="flex flex-col gap-3">
@@ -97,7 +93,7 @@ export function ProcesoPanel({
                   </div>
                 </div>
                 {puedeEditar && paso.campos.length > 0 && (
-                  esAdmin || !completado ? (
+                  enCurso || (completado && esAdmin) ? (
                     <Modal
                       title={paso.nombre}
                       className="max-w-2xl"
@@ -109,11 +105,15 @@ export function ProcesoPanel({
                     >
                       <PasoForm gestion={gestion} campos={paso.campos} aduanas={aduanas} diligenciado={diligenciado} />
                     </Modal>
-                  ) : (
+                  ) : completado && !esAdmin ? (
                     <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground" title="Etapa completada: solo un administrador puede editarla">
                       <Lock className="size-3" /> Solo administrador
                     </span>
-                  )
+                  ) : !completado && !enCurso ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/70" title="Disponible cuando la operación llegue a esta etapa">
+                      <Lock className="size-3" /> Etapa posterior
+                    </span>
+                  ) : null
                 )}
               </div>
 
@@ -136,14 +136,6 @@ export function ProcesoPanel({
                     </Badge>
                   ))}
                 </div>
-              )}
-
-              {enCurso && haySiguiente && (
-                <AvanzarEtapaPaso
-                  gestionId={gestion.id}
-                  faltantes={faltantesParaAvanzar(gestion, paso.nombre).map((c) => ({ name: c.name, label: c.label }))}
-                  puedeAvanzar={puedeAvanzar}
-                />
               )}
             </CardContent>
           </Card>

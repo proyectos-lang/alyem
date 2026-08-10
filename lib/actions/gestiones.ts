@@ -332,8 +332,9 @@ export async function editarDatosGestion(form: FormData) {
   const bl = form.has("numero_bl") ? ((form.get("numero_bl") as string) || "").trim() : ""
   if (form.has("numero_bl")) patch.carta_porte = bl || null
 
-  // Bloqueo por rol: los operadores solo editan campos de la etapa ACTUAL o
-  // futuras; los datos de cabecera/intake y de etapas ya completadas son admin-only.
+  // Bloqueo por rol: los operadores solo pueden diligenciar campos de la etapa
+  // ACTUAL. Las etapas ya completadas, las posteriores y los datos de
+  // cabecera/intake quedan reservados al administrador.
   if (usuario!.rol !== "admin" && Object.keys(patch).length > 0) {
     const { data: est } = await sb
       .from("v_gestion_estado_actual")
@@ -343,10 +344,10 @@ export async function editarDatosGestion(form: FormData) {
     const currentIndex = etapaIndexPorNombre((est as { estado_nombre?: string } | null)?.estado_nombre)
     const bloqueados = Object.keys(patch).filter((campo) => {
       const i = etapaIndexDeCampo(campo)
-      return i === null || (currentIndex >= 0 && i < currentIndex)
+      return i === null || (currentIndex >= 0 && i !== currentIndex)
     })
     if (bloqueados.length > 0) {
-      throw new Error("Solo un administrador puede editar los datos de la operación o de etapas ya completadas.")
+      throw new Error("Solo puedes diligenciar la etapa actual. Las demás las edita un administrador.")
     }
   }
 

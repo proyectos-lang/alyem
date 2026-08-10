@@ -213,7 +213,6 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                 aduanas={aduanas}
                 estadoActualNombre={g.estado?.nombre}
                 puedeEditar={puede(usuario, PERMISOS.GESTION_EDITAR)}
-                puedeAvanzar={agencia && puede(usuario, PERMISOS.EVENTO_REGISTRAR)}
                 esAdmin={usuario.rol === "admin"}
               />
             </TabsContent>
