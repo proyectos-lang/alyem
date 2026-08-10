@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/modal"
 import { PasoForm } from "@/components/paso-form"
-import { PASOS, type CampoPaso } from "@/lib/pasos"
+import { AvanzarEtapaPaso } from "@/components/avanzar-etapa-paso"
+import { PASOS, faltantesParaAvanzar, type CampoPaso } from "@/lib/pasos"
 import { fecha, fechaHora } from "@/lib/format"
 import type { Aduana, Documento, EstadoCatalogo, Gestion } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -43,6 +44,7 @@ export function ProcesoPanel({
   aduanas,
   estadoActualNombre,
   puedeEditar,
+  puedeAvanzar = false,
   esAdmin = false,
 }: {
   gestion: Gestion
@@ -51,10 +53,12 @@ export function ProcesoPanel({
   aduanas: Aduana[]
   estadoActualNombre?: string
   puedeEditar: boolean
+  puedeAvanzar?: boolean
   esAdmin?: boolean
 }) {
   const flujo = estados.filter((e) => e.tipo === "normal" || e.tipo === "final").sort((a, b) => a.orden - b.orden)
   const currentIndex = flujo.findIndex((e) => e.nombre === estadoActualNombre)
+  const haySiguiente = currentIndex >= 0 && currentIndex < flujo.length - 1
 
   return (
     <div className="flex flex-col gap-3">
@@ -66,9 +70,17 @@ export function ProcesoPanel({
           ? documentos.filter((d) => paso.docs!.includes(d.tipo?.nombre ?? ""))
           : []
         const diligenciado = pasoDiligenciado(gestion, paso.campos)
+        // Etapa "completa": tiene campos y no le falta ninguno requerido por diligenciar.
+        const completoEtapa = paso.campos.length > 0 && faltantesParaAvanzar(gestion, paso.nombre).length === 0
 
         return (
-          <Card key={paso.nombre} className={cn(enCurso && "border-primary/40 ring-1 ring-primary/20")}>
+          <Card
+            key={paso.nombre}
+            className={cn(
+              enCurso && completoEtapa && "border-emerald-500/50 ring-1 ring-emerald-500/20",
+              enCurso && !completoEtapa && "border-primary/40 ring-1 ring-primary/20",
+            )}
+          >
             <CardContent className="flex flex-col gap-3 pt-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex items-start gap-2.5">
@@ -76,7 +88,7 @@ export function ProcesoPanel({
                     {completado ? (
                       <Check className="size-5 text-emerald-600" />
                     ) : enCurso ? (
-                      <CircleDot className="size-5 text-amber-500" />
+                      <CircleDot className={cn("size-5", completoEtapa ? "text-emerald-600" : "text-amber-500")} />
                     ) : (
                       <Circle className="size-5 text-muted-foreground/40" />
                     )}
@@ -87,7 +99,8 @@ export function ProcesoPanel({
                       <Badge variant={paso.responsable === "cliente" ? "secondary" : "outline"}>
                         {paso.responsable === "cliente" ? "Cliente" : "Alyem"}
                       </Badge>
-                      {enCurso && <Badge variant="warning">En curso</Badge>}
+                      {enCurso && !completoEtapa && <Badge variant="warning">En curso</Badge>}
+                      {enCurso && completoEtapa && <Badge variant="success">Diligenciada</Badge>}
                     </p>
                     <p className="text-xs text-muted-foreground">{paso.descripcion}</p>
                   </div>
@@ -136,6 +149,14 @@ export function ProcesoPanel({
                     </Badge>
                   ))}
                 </div>
+              )}
+
+              {enCurso && haySiguiente && (
+                <AvanzarEtapaPaso
+                  gestionId={gestion.id}
+                  faltantes={faltantesParaAvanzar(gestion, paso.nombre).map((c) => ({ name: c.name, label: c.label }))}
+                  puedeAvanzar={puedeAvanzar}
+                />
               )}
             </CardContent>
           </Card>
