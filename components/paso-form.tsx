@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -36,6 +36,22 @@ export function PasoForm({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
+  // Campos que actúan como "gate" (condición de otros) y su valor reactivo
+  // (tristate como "si"/"no"/""), para mostrar/ocultar los campos condicionales.
+  const gateNames = useMemo(
+    () => new Set(campos.filter((c) => c.condicion).map((c) => c.condicion!.campo)),
+    [campos],
+  )
+  const [gateVals, setGateVals] = useState<Record<string, string>>(() => {
+    const o: Record<string, string> = {}
+    for (const name of gateNames) {
+      const v = (gestion as Record<string, unknown>)[name]
+      o[name] = v === true ? "si" : v === false ? "no" : ""
+    }
+    return o
+  })
+  const strToBool = (s: string) => (s === "si" ? true : s === "no" ? false : null)
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
@@ -63,7 +79,10 @@ export function PasoForm({
   return (
     <form onSubmit={onSubmit} className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {campos.map((c) => (
+        {campos.map((c) => {
+          // Campo condicional: solo se muestra si su condición se cumple.
+          if (c.condicion && strToBool(gateVals[c.condicion.campo] ?? "") !== c.condicion.igual) return null
+          return (
           <div key={c.name} className={`flex flex-col gap-1.5 ${c.tipo === "textarea" ? "sm:col-span-2" : ""}`}>
             <Label className="text-xs">{c.label}</Label>
             {c.tipo === "text" && <Input name={c.name} defaultValue={(val(c.name) as string) ?? ""} />}
@@ -72,7 +91,11 @@ export function PasoForm({
             {c.tipo === "datetime" && <Input name={c.name} type="datetime-local" defaultValue={isoLocal(val(c.name))} />}
             {c.tipo === "textarea" && <Textarea name={c.name} rows={2} defaultValue={(val(c.name) as string) ?? ""} />}
             {c.tipo === "tristate" && (
-              <Select name={c.name} defaultValue={triVal(c.name)}>
+              <Select
+                name={c.name}
+                defaultValue={triVal(c.name)}
+                onChange={gateNames.has(c.name) ? (e) => setGateVals((p) => ({ ...p, [c.name]: e.target.value })) : undefined}
+              >
                 <option value="">—</option>
                 <option value="si">Sí</option>
                 <option value="no">No</option>
@@ -95,7 +118,8 @@ export function PasoForm({
               </Select>
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end">

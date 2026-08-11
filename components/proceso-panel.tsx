@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/modal"
 import { PasoForm } from "@/components/paso-form"
 import { AvanzarEtapaPaso } from "@/components/avanzar-etapa-paso"
-import { PASOS, faltantesParaAvanzar, type CampoPaso } from "@/lib/pasos"
+import { PASOS, faltantesParaAvanzar, condicionCumplida, type CampoPaso } from "@/lib/pasos"
 import { fecha, fechaHora } from "@/lib/format"
 import type { Aduana, Documento, EstadoCatalogo, Gestion } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -132,7 +132,7 @@ export function ProcesoPanel({
 
               {paso.campos.length > 0 && (
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 pl-7 sm:grid-cols-3">
-                  {paso.campos.map((c) => (
+                  {paso.campos.filter((c) => condicionCumplida(gestion, c)).map((c) => (
                     <div key={c.name} className="min-w-0">
                       <dt className="truncate text-[11px] text-muted-foreground">{c.label}</dt>
                       <dd className="truncate text-sm">{mostrarValor(gestion, c)}</dd>

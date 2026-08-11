@@ -309,7 +309,7 @@ const DATE = ["eta", "fecha_fin_dias_libres"]
 const DATETIME = ["fecha_hora_despacho"]
 const ENUM = ["tipo_operacion", "forma_pago", "estado_factura", "canal_selectivo", "aduana_id", "regimen_id"]
 const TRISTATE = [
-  "aforo", "digital", "previa", "naviera_aplica", "manifiesto_presentado", "liberacion",
+  "aforo", "digital", "previa", "duca_t", "naviera_aplica", "manifiesto_presentado", "liberacion",
   "doc_transporte_original", "boletin_enviado", "boletin_pagado", "gatepass_aplica",
   "transporte_naviera", "gatepass_entregado",
 ]
@@ -351,7 +351,15 @@ export async function editarDatosGestion(form: FormData) {
     }
   }
 
-  if (Object.keys(patch).length > 0) await sb.from("gestiones").update(patch).eq("id", gestionId)
+  if (Object.keys(patch).length > 0) {
+    const { error } = await sb.from("gestiones").update(patch).eq("id", gestionId)
+    // Resiliencia: si falla por la columna duca_t (aún sin migrar), reintenta sin ella.
+    if (error && "duca_t" in patch) {
+      const rest = { ...patch }
+      delete (rest as Record<string, unknown>).duca_t
+      if (Object.keys(rest).length > 0) await sb.from("gestiones").update(rest).eq("id", gestionId)
+    }
+  }
 
   // Si llega el BL y la referencia aún es el correlativo temporal (GES-…), la reemplaza por el BL.
   if (bl) {

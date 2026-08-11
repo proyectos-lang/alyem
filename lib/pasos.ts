@@ -8,6 +8,9 @@ export interface CampoPaso {
   label: string
   tipo: TipoCampo
   opciones?: { value: string; label: string }[]
+  // El campo solo se muestra/pide si otro campo de la etapa cumple una condición
+  // (ej. los campos de DUCA T solo si `duca_t` = true).
+  condicion?: { campo: string; igual: boolean | string }
 }
 
 const FORMA_PAGO = [
@@ -71,11 +74,6 @@ export const PASOS: Paso[] = [
       { name: "modelo", label: "Modelo(s) — uno por línea", tipo: "textarea" },
       { name: "forma_pago", label: "Forma de pago", tipo: "select", opciones: FORMA_PAGO },
       { name: "forma_pago_otro", label: "Forma de pago (otros)", tipo: "text" },
-      { name: "razon_social", label: "Razón social (DUCA T)", tipo: "text" },
-      { name: "rtn", label: "RTN (DUCA T)", tipo: "text" },
-      { name: "kilos", label: "Kilos (DUCA T)", tipo: "num" },
-      { name: "bultos", label: "Bultos (DUCA T)", tipo: "num" },
-      { name: "numeros_factura", label: "Números de factura (DUCA T)", tipo: "text" },
       { name: "carta_porte", label: "Número de BL / carta de porte", tipo: "text" },
     ],
   },
@@ -93,6 +91,13 @@ export const PASOS: Paso[] = [
       { name: "aforo", label: "Aforo", tipo: "tristate" },
       { name: "digital", label: "Digital", tipo: "tristate" },
       { name: "previa", label: "Previa", tipo: "tristate" },
+      { name: "duca_t", label: "DUCA T", tipo: "tristate" },
+      // Se piden solo si DUCA T = Sí.
+      { name: "razon_social", label: "Razón social (DUCA T)", tipo: "text", condicion: { campo: "duca_t", igual: true } },
+      { name: "rtn", label: "RTN (DUCA T)", tipo: "text", condicion: { campo: "duca_t", igual: true } },
+      { name: "kilos", label: "Kilos (DUCA T)", tipo: "num", condicion: { campo: "duca_t", igual: true } },
+      { name: "bultos", label: "Bultos (DUCA T)", tipo: "num", condicion: { campo: "duca_t", igual: true } },
+      { name: "numeros_factura", label: "Números de factura (DUCA T)", tipo: "text", condicion: { campo: "duca_t", igual: true } },
     ],
   },
   {
@@ -196,6 +201,12 @@ function tieneValor(gestion: unknown, name: string): boolean {
   return v != null && v !== ""
 }
 
+// ¿Se muestra/pide el campo? True si no tiene condición o si su condición se cumple.
+export function condicionCumplida(gestion: unknown, c: CampoPaso): boolean {
+  if (!c.condicion) return true
+  return valorCampo(gestion, c.condicion.campo) === c.condicion.igual
+}
+
 // Campos requeridos de una etapa que aún están vacíos. Si la etapa tiene un
 // tristate `*_aplica` en `false`, la etapa no aplica y no se exige nada más.
 export function faltantesParaAvanzar(gestion: unknown, nombreEtapa: string | null | undefined): CampoPaso[] {
@@ -210,7 +221,9 @@ export function faltantesParaAvanzar(gestion: unknown, nombreEtapa: string | nul
     // v === true → se exige el resto (sigue al flujo normal)
   }
 
-  const requeridos = paso.campos.filter((c) => !OPCIONALES_AVANCE.has(c.name))
+  const requeridos = paso.campos.filter(
+    (c) => !OPCIONALES_AVANCE.has(c.name) && condicionCumplida(gestion, c),
+  )
   return requeridos.filter((c) => !tieneValor(gestion, c.name))
 }
 
