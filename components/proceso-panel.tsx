@@ -72,6 +72,9 @@ export function ProcesoPanel({
         const diligenciado = pasoDiligenciado(gestion, paso.campos)
         // Etapa "completa": tiene campos y no le falta ninguno requerido por diligenciar.
         const completoEtapa = paso.campos.length > 0 && faltantesParaAvanzar(gestion, paso.nombre).length === 0
+        // Etapa actual editable: se muestra el formulario en línea con botón "Guardar"
+        // (permite guardar parcialmente sin avanzar). Las demás usan el modal.
+        const editarInline = enCurso && puedeEditar && paso.campos.length > 0
 
         return (
           <Card
@@ -105,7 +108,7 @@ export function ProcesoPanel({
                     <p className="text-xs text-muted-foreground">{paso.descripcion}</p>
                   </div>
                 </div>
-                {puedeEditar && paso.campos.length > 0 && (
+                {!editarInline && puedeEditar && paso.campos.length > 0 && (
                   // El paso 1 (Notificación del embarque) siempre es editable por quien
                   // pueda editar (operador incluido), aunque el proceso ya haya avanzado.
                   enCurso || (completado && esAdmin) || i === 0 ? (
@@ -132,7 +135,7 @@ export function ProcesoPanel({
                 )}
               </div>
 
-              {paso.campos.length > 0 && (
+              {paso.campos.length > 0 && !editarInline && (
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 pl-7 sm:grid-cols-3">
                   {paso.campos.filter((c) => condicionCumplida(gestion, c)).map((c) => (
                     <div key={c.name} className="min-w-0">
@@ -141,6 +144,12 @@ export function ProcesoPanel({
                     </div>
                   ))}
                 </dl>
+              )}
+
+              {editarInline && (
+                <div className="pl-7">
+                  <PasoForm gestion={gestion} campos={paso.campos} aduanas={aduanas} diligenciado={diligenciado} inline />
+                </div>
               )}
 
               {docsPaso.length > 0 && (

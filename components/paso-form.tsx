@@ -25,11 +25,13 @@ export function PasoForm({
   campos,
   aduanas,
   diligenciado = true,
+  inline = false,
 }: {
   gestion: Gestion
   campos: CampoPaso[]
   aduanas: Aduana[]
   diligenciado?: boolean
+  inline?: boolean
 }) {
   const router = useRouter()
   const close = useModalClose()
@@ -77,7 +79,7 @@ export function PasoForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
+    <form onSubmit={onSubmit} className={inline ? "flex flex-col gap-3" : "flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1"}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {campos.map((c) => {
           // Campo condicional: solo se muestra si su condición se cumple.
@@ -124,7 +126,7 @@ export function PasoForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>
-          {pending ? "Guardando…" : diligenciado ? "Guardar cambios" : "Diligenciar paso"}
+          {pending ? "Guardando…" : inline ? "Guardar" : diligenciado ? "Guardar cambios" : "Diligenciar paso"}
         </Button>
       </div>
     </form>
