@@ -52,7 +52,13 @@ export async function listarGestiones(
   opts: { texto?: string; operadorId?: string } = {},
 ): Promise<GestionConEstado[]> {
   const sb = getSupabase()
-  let q = sb.from("gestiones").select(SEL_GESTION).order("created_at", { ascending: false })
+  // Orden por proximidad de llegada: ETA ascendente (las ya llegadas / próximas
+  // primero, las más lejanas al final; sin ETA van al final). created_at como desempate.
+  let q = sb
+    .from("gestiones")
+    .select(SEL_GESTION)
+    .order("eta", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
 
   const vis = await empresasVisibles(usuario)
   if (vis) {

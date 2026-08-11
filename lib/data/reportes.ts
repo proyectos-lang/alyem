@@ -29,7 +29,12 @@ export async function filasReporte(
   f: FiltrosReporte,
 ): Promise<FilaReporte[]> {
   const sb = getSupabase()
-  let q = sb.from("gestiones").select(SEL).order("created_at", { ascending: false })
+  // Orden por proximidad de llegada (ETA ascendente; sin ETA al final).
+  let q = sb
+    .from("gestiones")
+    .select(SEL)
+    .order("eta", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
 
   // Alcance por empresa (cliente = su empresa, operador = sus clientes asignados).
   const vis = await empresasVisibles(usuario)

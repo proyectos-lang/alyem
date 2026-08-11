@@ -136,4 +136,19 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Vista móvil más compacta: reduce la escala base en pantallas pequeñas para
+     que todo (texto y espaciados en rem) se vea más pequeño y quepa mejor. Las
+     media queries de Tailwind usan el tamaño inicial (16px), así que los
+     breakpoints no se desplazan. */
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px;
+    }
+  }
+  @media (max-width: 380px) {
+    html {
+      font-size: 13px;
+    }
+  }
 }
