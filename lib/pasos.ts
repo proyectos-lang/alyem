@@ -91,13 +91,12 @@ export const PASOS: Paso[] = [
       { name: "aforo", label: "Aforo", tipo: "tristate" },
       { name: "digital", label: "Digital", tipo: "tristate" },
       { name: "previa", label: "Previa", tipo: "tristate" },
-      { name: "duca_t", label: "DUCA T", tipo: "tristate" },
-      // Se piden solo si DUCA T = Sí.
-      { name: "razon_social", label: "Razón social (DUCA T)", tipo: "text", condicion: { campo: "duca_t", igual: true } },
-      { name: "rtn", label: "RTN (DUCA T)", tipo: "text", condicion: { campo: "duca_t", igual: true } },
-      { name: "kilos", label: "Kilos (DUCA T)", tipo: "num", condicion: { campo: "duca_t", igual: true } },
-      { name: "bultos", label: "Bultos (DUCA T)", tipo: "num", condicion: { campo: "duca_t", igual: true } },
-      { name: "numeros_factura", label: "Números de factura (DUCA T)", tipo: "text", condicion: { campo: "duca_t", igual: true } },
+      // Campos DUCA T: siempre visibles y opcionales (no bloquean el avance).
+      { name: "razon_social", label: "Razón social (DUCA T)", tipo: "text" },
+      { name: "rtn", label: "RTN (DUCA T)", tipo: "text" },
+      { name: "kilos", label: "Kilos (DUCA T)", tipo: "num" },
+      { name: "bultos", label: "Bultos (DUCA T)", tipo: "num" },
+      { name: "numeros_factura", label: "Números de factura (DUCA T)", tipo: "text" },
     ],
   },
   {
@@ -191,6 +190,12 @@ export const OPCIONALES_AVANCE = new Set<string>([
   "previa",
   "descripcion_carga", // heredado del intake (Paso 1)
   "fecha_fin_dias_libres", // se calcula solo / puede no aplicar
+  // Campos DUCA T: opcionales, no bloquean el avance.
+  "razon_social",
+  "rtn",
+  "kilos",
+  "bultos",
+  "numeros_factura",
 ])
 
 function valorCampo(gestion: unknown, name: string): unknown {
