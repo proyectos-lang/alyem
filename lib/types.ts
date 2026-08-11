@@ -15,6 +15,9 @@ export interface Empresa {
   nombre: string
   id_fiscal: string | null
   contacto: string | null
+  cuenta: string | null
+  codigo_sn: string | null
+  telefono_1: string | null
   activo: boolean
   created_at: string
 }

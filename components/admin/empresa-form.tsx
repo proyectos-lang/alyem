@@ -66,6 +66,18 @@ export function EmpresaForm({
           <Label htmlFor="contacto">Contacto</Label>
           <Input id="contacto" name="contacto" defaultValue={empresa?.contacto ?? ""} />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="cuenta">Cuenta</Label>
+          <Input id="cuenta" name="cuenta" defaultValue={empresa?.cuenta ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="codigo_sn">Código SN</Label>
+          <Input id="codigo_sn" name="codigo_sn" defaultValue={empresa?.codigo_sn ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="telefono_1">Teléfono 1</Label>
+          <Input id="telefono_1" name="telefono_1" defaultValue={empresa?.telefono_1 ?? ""} />
+        </div>
       </div>
 
       <label className="flex items-center gap-2 text-sm">

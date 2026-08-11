@@ -58,6 +58,9 @@ export default async function EmpresasPage() {
                 <TableHead>Empresa</TableHead>
                 <TableHead>ID fiscal</TableHead>
                 <TableHead>Contacto</TableHead>
+                <TableHead>Cuenta</TableHead>
+                <TableHead>Código SN</TableHead>
+                <TableHead>Teléfono 1</TableHead>
                 <TableHead>Usuarios</TableHead>
                 <TableHead>Operadores</TableHead>
                 <TableHead>Estado</TableHead>
@@ -71,6 +74,9 @@ export default async function EmpresasPage() {
                   <TableCell className="font-medium">{e.nombre}</TableCell>
                   <TableCell className="text-muted-foreground">{e.id_fiscal ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.contacto ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{e.cuenta ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{e.codigo_sn ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{e.telefono_1 ?? "—"}</TableCell>
                   <TableCell>{conteo.get(e.id) ?? 0}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {(() => {
@@ -98,7 +104,7 @@ export default async function EmpresasPage() {
               ))}
               {empresas.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
                     No hay empresas todavía.
                   </TableCell>
                 </TableRow>

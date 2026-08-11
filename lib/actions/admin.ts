@@ -17,21 +17,38 @@ export async function guardarEmpresa(form: FormData) {
   await guard(PERMISOS.ADMIN_EMPRESAS)
   const sb = getSupabase()
   const id = form.get("id") as string | null
-  const fila = {
+  const filaBase = {
     nombre: String(form.get("nombre") ?? "").trim(),
     id_fiscal: (form.get("id_fiscal") as string) || null,
     contacto: (form.get("contacto") as string) || null,
     activo: form.get("activo") === "on" || form.get("activo") === "true",
   }
-  if (!fila.nombre) throw new Error("El nombre es obligatorio.")
+  if (!filaBase.nombre) throw new Error("El nombre es obligatorio.")
+
+  // Campos adicionales (Cuenta, Código SN, Teléfono 1). Si las columnas aún no
+  // existen (pre-migración empresas-campos.sql), se guarda solo la base.
+  const fila = {
+    ...filaBase,
+    cuenta: (form.get("cuenta") as string) || null,
+    codigo_sn: (form.get("codigo_sn") as string) || null,
+    telefono_1: (form.get("telefono_1") as string) || null,
+  }
 
   let empresaId = id
   if (id) {
-    await sb.from("empresas").update(fila).eq("id", id)
+    const { error } = await sb.from("empresas").update(fila).eq("id", id)
+    if (error) {
+      const r = await sb.from("empresas").update(filaBase).eq("id", id)
+      if (r.error) throw new Error(r.error.message)
+    }
   } else {
-    const { data, error } = await sb.from("empresas").insert({ ...fila, activo: true }).select("id").single()
-    if (error) throw new Error(error.message)
-    empresaId = data.id as string
+    let { data, error } = await sb.from("empresas").insert({ ...fila, activo: true }).select("id").single()
+    if (error) {
+      const r = await sb.from("empresas").insert({ ...filaBase, activo: true }).select("id").single()
+      if (r.error) throw new Error(r.error.message)
+      data = r.data
+    }
+    empresaId = data!.id as string
   }
 
   // Operadores asignados a esta empresa. Sincroniza operador_empresas por empresa:
