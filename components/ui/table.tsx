@@ -1,15 +1,28 @@
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+// `maxHeight` acota la altura de la tabla: al superarla, la tabla hace scroll
+// vertical interno (evita que crezca sin fin) y el encabezado queda fijo (sticky).
+function Table({
+  className,
+  maxHeight = "70vh",
+  ...props
+}: React.ComponentProps<"table"> & { maxHeight?: string }) {
   return (
-    <div className="relative w-full overflow-x-auto">
+    // En impresión se expande completa (sin tope de alto ni scroll).
+    <div className="relative w-full overflow-auto print:overflow-visible print:!max-h-none" style={{ maxHeight }}>
       <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   )
 }
 
+// Encabezado fijo (sticky) al hacer scroll vertical dentro del contenedor.
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return <thead className={cn("[&_tr]:border-b [&_tr]:border-border [&_tr]:bg-muted/30", className)} {...props} />
+  return (
+    <thead
+      className={cn("sticky top-0 z-10 print:static [&_tr]:border-b [&_tr]:border-border [&_tr]:bg-muted", className)}
+      {...props}
+    />
+  )
 }
 
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {

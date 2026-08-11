@@ -1,14 +1,11 @@
-import { Plus, Pencil } from "lucide-react"
+import { Plus } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card } from "@/components/ui/card"
 import { Modal } from "@/components/ui/modal"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { EmpresaForm } from "@/components/admin/empresa-form"
+import { EmpresasLista } from "@/components/admin/empresas-lista"
 import { getSupabase } from "@/lib/supabase/server"
-import { fecha } from "@/lib/format"
 import type { Empresa } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -25,17 +22,15 @@ export default async function EmpresasPage() {
   const listaOperadores = (operadores as { id: string; nombre: string }[]) ?? []
 
   // Conteo de usuarios cliente por empresa.
-  const conteo = new Map<string, number>()
+  const conteo: Record<string, number> = {}
   for (const u of (us as { empresa_id: string | null }[]) ?? []) {
-    if (u.empresa_id) conteo.set(u.empresa_id, (conteo.get(u.empresa_id) ?? 0) + 1)
+    if (u.empresa_id) conteo[u.empresa_id] = (conteo[u.empresa_id] ?? 0) + 1
   }
 
   // Operadores asignados por empresa (empresa_id → [usuario_id]).
-  const opsPorEmpresa = new Map<string, string[]>()
+  const asignados: Record<string, string[]> = {}
   for (const a of (asig as { usuario_id: string; empresa_id: string }[]) ?? []) {
-    const arr = opsPorEmpresa.get(a.empresa_id) ?? []
-    arr.push(a.usuario_id)
-    opsPorEmpresa.set(a.empresa_id, arr)
+    ;(asignados[a.empresa_id] ??= []).push(a.usuario_id)
   }
 
   return (
@@ -51,67 +46,7 @@ export default async function EmpresasPage() {
           }
         />
 
-        <Card className="mt-6 overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Empresa</TableHead>
-                <TableHead>ID fiscal</TableHead>
-                <TableHead>Contacto</TableHead>
-                <TableHead>Cuenta</TableHead>
-                <TableHead>Código SN</TableHead>
-                <TableHead>Teléfono 1</TableHead>
-                <TableHead>Usuarios</TableHead>
-                <TableHead>Operadores</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Alta</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {empresas.map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell className="font-medium">{e.nombre}</TableCell>
-                  <TableCell className="text-muted-foreground">{e.id_fiscal ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{e.contacto ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{e.cuenta ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{e.codigo_sn ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{e.telefono_1 ?? "—"}</TableCell>
-                  <TableCell>{conteo.get(e.id) ?? 0}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {(() => {
-                      const n = opsPorEmpresa.get(e.id)?.length ?? 0
-                      return n === 0 ? "—" : `${n} operador${n === 1 ? "" : "es"}`
-                    })()}
-                  </TableCell>
-                  <TableCell>
-                    {e.activo ? <Badge variant="success">Activa</Badge> : <Badge variant="muted">Inactiva</Badge>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{fecha(e.created_at)}</TableCell>
-                  <TableCell className="text-right">
-                    <Modal
-                      title="Editar empresa"
-                      trigger={
-                        <Button variant="ghost" size="icon-sm">
-                          <Pencil />
-                        </Button>
-                      }
-                    >
-                      <EmpresaForm empresa={e} operadores={listaOperadores} asignados={opsPorEmpresa.get(e.id) ?? []} />
-                    </Modal>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {empresas.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
-                    No hay empresas todavía.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Card>
+        <EmpresasLista empresas={empresas} conteo={conteo} operadores={listaOperadores} asignados={asignados} />
       </div>
     </PortalShell>
   )
