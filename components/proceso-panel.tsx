@@ -106,7 +106,9 @@ export function ProcesoPanel({
                   </div>
                 </div>
                 {puedeEditar && paso.campos.length > 0 && (
-                  enCurso || (completado && esAdmin) ? (
+                  // El paso 1 (Notificación del embarque) siempre es editable por quien
+                  // pueda editar (operador incluido), aunque el proceso ya haya avanzado.
+                  enCurso || (completado && esAdmin) || i === 0 ? (
                     <Modal
                       title={paso.nombre}
                       className="max-w-2xl"

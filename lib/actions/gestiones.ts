@@ -344,6 +344,7 @@ export async function editarDatosGestion(form: FormData) {
     const currentIndex = etapaIndexPorNombre((est as { estado_nombre?: string } | null)?.estado_nombre)
     const bloqueados = Object.keys(patch).filter((campo) => {
       const i = etapaIndexDeCampo(campo)
+      if (i === 0) return false // Paso 1 (Notificación del embarque): editable por el operador siempre.
       return i === null || (currentIndex >= 0 && i !== currentIndex)
     })
     if (bloqueados.length > 0) {
