@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
+import { Combobox, MultiCombobox } from "@/components/ui/combobox"
 import { useModalClose } from "@/components/ui/modal"
 import { guardarUsuario } from "@/lib/actions/admin"
 import { PERMISOS_META, permisosDefault } from "@/lib/permisos"
@@ -26,20 +27,14 @@ export function UsuarioForm({
   const [error, setError] = useState<string | null>(null)
 
   const [rol, setRol] = useState<Rol>(usuario?.rol ?? "cliente")
+  const [empresaId, setEmpresaId] = useState<string | null>(usuario?.empresa_id ?? null)
+  const [clientes, setClientes] = useState<string[]>(asignados)
   const [usarDefaults, setUsarDefaults] = useState(!usuario?.permisos)
   const [permisos, setPermisos] = useState<Set<string>>(
     new Set(usuario?.permisos ?? permisosDefault(usuario?.rol ?? "cliente")),
   )
-  const [clientes, setClientes] = useState<Set<string>>(new Set(asignados))
 
-  function toggleCliente(id: string) {
-    setClientes((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  const empresaOptions = useMemo(() => empresas.map((e) => ({ value: e.id, label: e.nombre })), [empresas])
 
   const defaultsDelRol = useMemo(() => new Set(permisosDefault(rol)), [rol])
   const efectivos = usarDefaults ? defaultsDelRol : permisos
@@ -61,6 +56,10 @@ export function UsuarioForm({
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    if (rol === "cliente" && !empresaId) {
+      setError("Selecciona la empresa del cliente.")
+      return
+    }
     const fd = new FormData(e.currentTarget)
     fd.set("usar_defaults", usarDefaults ? "on" : "off")
     fd.delete("permisos")
@@ -117,16 +116,16 @@ export function UsuarioForm({
         {rol === "cliente" && (
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="empresa_id">Empresa</Label>
-            <Select id="empresa_id" name="empresa_id" defaultValue={usuario?.empresa_id ?? ""} required>
-              <option value="" disabled>
-                Selecciona…
-              </option>
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nombre}
-                </option>
-              ))}
-            </Select>
+            <Combobox
+              id="empresa_id"
+              name="empresa_id"
+              options={empresaOptions}
+              value={empresaId}
+              onChange={setEmpresaId}
+              placeholder="Selecciona la empresa…"
+              buscarPlaceholder="Escribe el nombre de la empresa…"
+              emptyText="Sin empresas que coincidan."
+            />
           </div>
         )}
       </div>
@@ -135,24 +134,20 @@ export function UsuarioForm({
         <div className="rounded-lg border border-border p-3">
           <p className="text-sm font-medium">Clientes asignados</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Este operador solo verá las solicitudes y trámites de los clientes marcados.{" "}
+            Este operador solo verá las solicitudes y trámites de los clientes elegidos.{" "}
             <span className="font-medium">Vacío = ve todas las operaciones.</span>
           </p>
           {empresas.length === 0 ? (
             <p className="mt-3 text-xs text-muted-foreground">No hay clientes registrados todavía.</p>
           ) : (
-            <div className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">
-              {empresas.map((e) => (
-                <label key={e.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={clientes.has(e.id)}
-                    onChange={() => toggleCliente(e.id)}
-                    className="size-4 accent-[var(--primary)]"
-                  />
-                  {e.nombre}
-                </label>
-              ))}
+            <div className="mt-3">
+              <MultiCombobox
+                options={empresaOptions}
+                values={clientes}
+                onChange={setClientes}
+                placeholder="Buscar y agregar cliente…"
+                emptyText="Sin clientes que coincidan."
+              />
             </div>
           )}
         </div>
