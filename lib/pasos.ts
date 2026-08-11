@@ -139,10 +139,21 @@ export const PASOS: Paso[] = [
     campos: [{ name: "canal_selectivo", label: "Canal", tipo: "select", opciones: CANAL }],
   },
   {
+    nombre: "Revisión",
+    responsable: "alyem",
+    descripcion: "Fechas de revisión, aprobación de aduana, OPC y posicionamiento de equipos.",
+    campos: [
+      { name: "fecha_revision", label: "Fecha de revisión", tipo: "date" },
+      { name: "fecha_aprobacion_aduana", label: "Fecha de aprobación aduana", tipo: "date" },
+      { name: "fecha_revision_opc", label: "Fecha de revisión por OPC", tipo: "date" },
+      { name: "fecha_posicionamiento_equipos", label: "Fecha de posicionamiento de equipos", tipo: "date" },
+    ],
+  },
+  {
     nombre: "Levante de aduana",
     responsable: "alyem",
-    descripcion: "Se registra la fecha y hora de despacho.",
-    campos: [{ name: "fecha_hora_despacho", label: "Fecha y hora de despacho", tipo: "datetime" }],
+    descripcion: "Se registra la fecha de levante.",
+    campos: [{ name: "fecha_levante", label: "Fecha de levante", tipo: "date" }],
   },
   {
     nombre: "Entrega del gatepass",
@@ -152,6 +163,7 @@ export const PASOS: Paso[] = [
       { name: "gatepass_aplica", label: "¿Aplica?", tipo: "tristate" },
       { name: "transporte_naviera", label: "Transporte de la naviera", tipo: "tristate" },
       { name: "gatepass_entregado", label: "Gatepass entregado", tipo: "tristate" },
+      { name: "gatepass_fecha_hora", label: "Fecha y hora del gate pass", tipo: "datetime" },
       { name: "gatepass_observacion", label: "Observaciones", tipo: "textarea" },
     ],
   },
@@ -196,7 +208,17 @@ export const OPCIONALES_AVANCE = new Set<string>([
   "kilos",
   "bultos",
   "numeros_factura",
+  // Revisión: la fecha de revisión general es requerida; las específicas, opcionales.
+  "fecha_aprobacion_aduana",
+  "fecha_revision_opc",
+  "fecha_posicionamiento_equipos",
+  // Gate pass: fecha/hora es opcional.
+  "gatepass_fecha_hora",
 ])
+
+// Identificadores oficiales que NO se pueden editar una vez registrados (por nadie):
+// BL (carta_porte), número de declaración (correlativo_liquidacion) y número de ENP (numero_np).
+export const INMUTABLES = new Set<string>(["carta_porte", "correlativo_liquidacion", "numero_np"])
 
 function valorCampo(gestion: unknown, name: string): unknown {
   return (gestion as Record<string, unknown>)[name]

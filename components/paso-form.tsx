@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useModalClose } from "@/components/ui/modal"
 import { toast } from "sonner"
 import { editarDatosGestion } from "@/lib/actions/gestiones"
-import type { CampoPaso } from "@/lib/pasos"
+import { INMUTABLES, type CampoPaso } from "@/lib/pasos"
 import type { Aduana, Gestion } from "@/lib/types"
 
 function iso(v: unknown) {
@@ -84,10 +84,20 @@ export function PasoForm({
         {campos.map((c) => {
           // Campo condicional: solo se muestra si su condición se cumple.
           if (c.condicion && strToBool(gateVals[c.condicion.campo] ?? "") !== c.condicion.igual) return null
+          // Inmutable: BL / declaración / ENP no se editan una vez registrados.
+          const inmutable = INMUTABLES.has(c.name) && val(c.name) != null && val(c.name) !== ""
           return (
           <div key={c.name} className={`flex flex-col gap-1.5 ${c.tipo === "textarea" ? "sm:col-span-2" : ""}`}>
             <Label className="text-xs">{c.label}</Label>
-            {c.tipo === "text" && <Input name={c.name} defaultValue={(val(c.name) as string) ?? ""} />}
+            {c.tipo === "text" && (
+              <Input
+                name={c.name}
+                defaultValue={(val(c.name) as string) ?? ""}
+                readOnly={inmutable}
+                className={inmutable ? "bg-muted text-muted-foreground" : undefined}
+              />
+            )}
+            {inmutable && <span className="text-[11px] text-muted-foreground">No editable una vez registrado.</span>}
             {c.tipo === "num" && <Input name={c.name} type="number" step="any" defaultValue={(val(c.name) as number) ?? ""} />}
             {c.tipo === "date" && <Input name={c.name} type="date" defaultValue={iso(val(c.name))} />}
             {c.tipo === "datetime" && <Input name={c.name} type="datetime-local" defaultValue={isoLocal(val(c.name))} />}

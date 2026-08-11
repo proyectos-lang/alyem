@@ -121,7 +121,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                   <Button variant="outline">Reporte PDF</Button>
                 </Link>
                 {agencia && <CopiarTrack token={g.public_token} />}
-                {usuario.rol === "admin" && (
+                {usuario.rol === "admin" && !esFinal && (
                   <Modal title="Editar datos de la operación" className="max-w-2xl" trigger={<Button variant="outline"><Pencil /> Editar</Button>}>
                     <EditarDatosForm g={g} aduanas={aduanas} regimenes={regimenes} />
                   </Modal>

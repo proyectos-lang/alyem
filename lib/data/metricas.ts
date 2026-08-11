@@ -76,7 +76,7 @@ export function alertasDe(g: GestionConEstado, diasFria: number, slaEtapa?: numb
   const libres = diasLibresRestantes(g)
   if (libres != null) {
     if (libres < 0) out.push({ tipo: "libres_vencidos", etiqueta: "Días libres vencidos", severidad: "danger" })
-    else if (libres <= 3) out.push({ tipo: "libres", etiqueta: `Quedan ${libres}d libres`, severidad: "warning" })
+    else if (libres <= 5) out.push({ tipo: "libres", etiqueta: `Quedan ${libres}d libres`, severidad: "warning" })
   }
   return out
 }

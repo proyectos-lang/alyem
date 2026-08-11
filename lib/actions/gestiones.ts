@@ -6,7 +6,7 @@ import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
 import { getConfig } from "../config"
 import { empresasVisibles } from "../data/asignaciones"
-import { faltantesParaAvanzar, etapaIndexDeCampo, etapaIndexPorNombre } from "../pasos"
+import { faltantesParaAvanzar, etapaIndexDeCampo, etapaIndexPorNombre, INMUTABLES } from "../pasos"
 import { notificarAgencia, notificarEmpresa } from "./notificaciones"
 
 async function estadoIdPorNombre(patron: string): Promise<string | null> {
@@ -305,8 +305,11 @@ const TEXT = [
   "naviera_observaciones", "gatepass_observacion",
 ]
 const NUM = ["valor_fob", "valor_flete", "valor_seguro", "otros_gastos", "kilos", "bultos", "tiempo_libre_dias"]
-const DATE = ["eta", "fecha_fin_dias_libres"]
-const DATETIME = ["fecha_hora_despacho"]
+const DATE = [
+  "eta", "fecha_fin_dias_libres", "fecha_revision", "fecha_aprobacion_aduana",
+  "fecha_revision_opc", "fecha_posicionamiento_equipos", "fecha_levante",
+]
+const DATETIME = ["fecha_hora_despacho", "gatepass_fecha_hora"]
 const ENUM = ["tipo_operacion", "forma_pago", "estado_factura", "canal_selectivo", "aduana_id", "regimen_id"]
 const TRISTATE = [
   "aforo", "digital", "previa", "duca_t", "naviera_aplica", "manifiesto_presentado", "liberacion",
@@ -332,15 +335,39 @@ export async function editarDatosGestion(form: FormData) {
   const bl = form.has("numero_bl") ? ((form.get("numero_bl") as string) || "").trim() : ""
   if (form.has("numero_bl")) patch.carta_porte = bl || null
 
+  // Estado actual (para reglas de bloqueo). Se consulta una sola vez.
+  const { data: est } = await sb
+    .from("v_gestion_estado_actual")
+    .select("estado_nombre, estado_tipo")
+    .eq("gestion_id", gestionId)
+    .maybeSingle()
+  const estadoTipo = (est as { estado_tipo?: string } | null)?.estado_tipo
+
+  // Regla: operación cerrada o finalizada → nadie edita (ni un administrador).
+  if (estadoTipo === "final" || estadoTipo === "cancelada") {
+    throw new Error("La operación está cerrada o finalizada: ya no se pueden editar sus datos.")
+  }
+
+  // Regla: BL, número de declaración y número de ENP son inmutables una vez
+  // registrados; si ya tienen valor, se descartan del patch (no se pueden cambiar).
+  let cartaPortePrevia: string | null = null
+  if ([...INMUTABLES].some((c) => c in patch)) {
+    const { data: prev } = await sb
+      .from("gestiones")
+      .select("carta_porte, correlativo_liquidacion, numero_np")
+      .eq("id", gestionId)
+      .maybeSingle()
+    const p = (prev as Record<string, unknown>) ?? {}
+    cartaPortePrevia = (p.carta_porte as string) ?? null
+    for (const c of INMUTABLES) {
+      if (c in patch && p[c] != null && p[c] !== "") delete patch[c]
+    }
+  }
+
   // Bloqueo por rol: los operadores solo pueden diligenciar campos de la etapa
   // ACTUAL. Las etapas ya completadas, las posteriores y los datos de
   // cabecera/intake quedan reservados al administrador.
   if (usuario!.rol !== "admin" && Object.keys(patch).length > 0) {
-    const { data: est } = await sb
-      .from("v_gestion_estado_actual")
-      .select("estado_nombre")
-      .eq("gestion_id", gestionId)
-      .maybeSingle()
     const currentIndex = etapaIndexPorNombre((est as { estado_nombre?: string } | null)?.estado_nombre)
     const bloqueados = Object.keys(patch).filter((campo) => {
       const i = etapaIndexDeCampo(campo)
@@ -362,8 +389,9 @@ export async function editarDatosGestion(form: FormData) {
     }
   }
 
-  // Si llega el BL y la referencia aún es el correlativo temporal (GES-…), la reemplaza por el BL.
-  if (bl) {
+  // Si llega el BL (por primera vez) y la referencia aún es el correlativo temporal
+  // (GES-…), la reemplaza por el BL. Si ya había BL registrado, no se toca.
+  if (bl && !cartaPortePrevia) {
     const { data: g } = await sb.from("gestiones").select("referencia").eq("id", gestionId).maybeSingle()
     const refActual = (g as { referencia?: string } | null)?.referencia ?? ""
     if (refActual.startsWith("GES-") && refActual !== bl && !(await existeReferencia(bl))) {
@@ -389,7 +417,7 @@ export async function editarDatosGestion(form: FormData) {
   if (form.has("fecha_fin_dias_libres") && form.get("fecha_fin_dias_libres")) {
     const fin = new Date(form.get("fecha_fin_dias_libres") as string).getTime()
     const dias = Math.ceil((fin - Date.now()) / 86_400_000)
-    const umbral = Number((await getConfig("dias_alerta_libres")) ?? "3")
+    const umbral = Number((await getConfig("dias_alerta_libres")) ?? "5")
     if (dias <= umbral) {
       const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
       if (g) {

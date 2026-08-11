@@ -59,6 +59,10 @@ export function ProcesoPanel({
   const flujo = estados.filter((e) => e.tipo === "normal" || e.tipo === "final").sort((a, b) => a.orden - b.orden)
   const currentIndex = flujo.findIndex((e) => e.nombre === estadoActualNombre)
   const haySiguiente = currentIndex >= 0 && currentIndex < flujo.length - 1
+  // Operación cerrada o finalizada: nadie edita ningún valor (ni un administrador).
+  const estadoActual = estados.find((e) => e.nombre === estadoActualNombre)
+  const bloqueada = estadoActual?.tipo === "final" || estadoActual?.tipo === "cancelada"
+  const editable = puedeEditar && !bloqueada
 
   return (
     <div className="flex flex-col gap-3">
@@ -74,7 +78,7 @@ export function ProcesoPanel({
         const completoEtapa = paso.campos.length > 0 && faltantesParaAvanzar(gestion, paso.nombre).length === 0
         // Etapa actual editable: se muestra el formulario en línea con botón "Guardar"
         // (permite guardar parcialmente sin avanzar). Las demás usan el modal.
-        const editarInline = enCurso && puedeEditar && paso.campos.length > 0
+        const editarInline = enCurso && editable && paso.campos.length > 0
 
         return (
           <Card
@@ -108,7 +112,7 @@ export function ProcesoPanel({
                     <p className="text-xs text-muted-foreground">{paso.descripcion}</p>
                   </div>
                 </div>
-                {!editarInline && puedeEditar && paso.campos.length > 0 && (
+                {!editarInline && editable && paso.campos.length > 0 && (
                   // El paso 1 (Notificación del embarque) siempre es editable por quien
                   // pueda editar (operador incluido), aunque el proceso ya haya avanzado.
                   enCurso || (completado && esAdmin) || i === 0 ? (
