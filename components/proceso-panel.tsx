@@ -108,6 +108,12 @@ export function ProcesoPanel({
                       </Badge>
                       {enCurso && !completoEtapa && <Badge variant="warning">En curso</Badge>}
                       {enCurso && completoEtapa && <Badge variant="success">Diligenciada</Badge>}
+                      {paso.nombre === "Revisión" && gestion.canal_selectivo === "amarillo" && (
+                        <Badge variant="warning">Levante en proceso</Badge>
+                      )}
+                      {paso.nombre === "Revisión" && gestion.canal_selectivo === "verde" && (
+                        <Badge variant="success">Pasa directo al levante</Badge>
+                      )}
                     </p>
                     <p className="text-xs text-muted-foreground">{paso.descripcion}</p>
                   </div>

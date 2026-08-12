@@ -316,6 +316,8 @@ const TRISTATE = [
   "doc_transporte_original", "boletin_enviado", "boletin_pagado", "gatepass_aplica",
   "transporte_naviera", "gatepass_entregado",
 ]
+// Columnas que pueden no estar migradas aún; si el update falla, se reintenta sin ellas.
+const POSIBLES_SIN_MIGRAR = ["duca_t"]
 
 export async function editarDatosGestion(form: FormData) {
   const usuario = await getUsuarioActivo()
@@ -381,10 +383,10 @@ export async function editarDatosGestion(form: FormData) {
 
   if (Object.keys(patch).length > 0) {
     const { error } = await sb.from("gestiones").update(patch).eq("id", gestionId)
-    // Resiliencia: si falla por la columna duca_t (aún sin migrar), reintenta sin ella.
-    if (error && "duca_t" in patch) {
+    // Resiliencia: si falla, reintenta sin columnas que pueden no estar migradas aún.
+    if (error && POSIBLES_SIN_MIGRAR.some((c) => c in patch)) {
       const rest = { ...patch }
-      delete (rest as Record<string, unknown>).duca_t
+      for (const c of POSIBLES_SIN_MIGRAR) delete (rest as Record<string, unknown>)[c]
       if (Object.keys(rest).length > 0) await sb.from("gestiones").update(rest).eq("id", gestionId)
     }
   }

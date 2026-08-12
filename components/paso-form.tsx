@@ -38,10 +38,15 @@ export function PasoForm({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  // Campos que actúan como "gate" (condición de otros) y su valor reactivo
-  // (tristate como "si"/"no"/""), para mostrar/ocultar los campos condicionales.
+  // Campos "gate" que existen en ESTE formulario (tristate) y su valor reactivo
+  // ("si"/"no"/""), para mostrar/ocultar los campos condicionales.
   const gateNames = useMemo(
-    () => new Set(campos.filter((c) => c.condicion).map((c) => c.condicion!.campo)),
+    () =>
+      new Set(
+        campos
+          .filter((c) => c.condicion && campos.some((cc) => cc.name === c.condicion!.campo))
+          .map((c) => c.condicion!.campo),
+      ),
     [campos],
   )
   const [gateVals, setGateVals] = useState<Record<string, string>>(() => {
@@ -53,6 +58,16 @@ export function PasoForm({
     return o
   })
   const strToBool = (s: string) => (s === "si" ? true : s === "no" ? false : null)
+
+  // ¿Se muestra el campo condicional? Si el gate es un campo de este formulario
+  // (tristate), usa su valor reactivo; si es un valor fijo de la gestión
+  // (p. ej. canal_selectivo), se compara directamente.
+  function cumpleCondicion(c: CampoPaso): boolean {
+    if (!c.condicion) return true
+    const { campo, igual } = c.condicion
+    if (gateNames.has(campo)) return strToBool(gateVals[campo] ?? "") === igual
+    return (gestion as Record<string, unknown>)[campo] === igual
+  }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -78,12 +93,17 @@ export function PasoForm({
     return v === true ? "si" : v === false ? "no" : ""
   }
 
+  const sinCampos = campos.filter(cumpleCondicion).length === 0
+
   return (
     <form onSubmit={onSubmit} className={inline ? "flex flex-col gap-3" : "flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1"}>
+      {sinCampos && (
+        <p className="text-sm text-muted-foreground">No hay datos por capturar en esta etapa; puedes avanzar directamente.</p>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {campos.map((c) => {
           // Campo condicional: solo se muestra si su condición se cumple.
-          if (c.condicion && strToBool(gateVals[c.condicion.campo] ?? "") !== c.condicion.igual) return null
+          if (!cumpleCondicion(c)) return null
           // Inmutable: BL / declaración / ENP no se editan una vez registrados.
           const inmutable = INMUTABLES.has(c.name) && val(c.name) != null && val(c.name) !== ""
           return (
@@ -134,11 +154,13 @@ export function PasoForm({
         })}
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Guardando…" : inline ? "Guardar" : diligenciado ? "Guardar cambios" : "Diligenciar paso"}
-        </Button>
-      </div>
+      {!sinCampos && (
+        <div className="flex justify-end">
+          <Button type="submit" disabled={pending}>
+            {pending ? "Guardando…" : inline ? "Guardar" : diligenciado ? "Guardar cambios" : "Diligenciar paso"}
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

@@ -141,12 +141,13 @@ export const PASOS: Paso[] = [
   {
     nombre: "Revisión",
     responsable: "alyem",
-    descripcion: "Fechas de revisión, aprobación de aduana, OPC y posicionamiento de equipos.",
+    descripcion: "Aplica solo con canal rojo. Con verde pasa directo al levante; con amarillo, levante en proceso.",
+    // Automático por canal: solo aplica (pide fechas) cuando el Selectivo fue rojo.
     campos: [
-      { name: "fecha_revision", label: "Fecha de revisión", tipo: "date" },
-      { name: "fecha_aprobacion_aduana", label: "Fecha de aprobación aduana", tipo: "date" },
-      { name: "fecha_revision_opc", label: "Fecha de revisión por OPC", tipo: "date" },
-      { name: "fecha_posicionamiento_equipos", label: "Fecha de posicionamiento de equipos", tipo: "date" },
+      { name: "fecha_revision", label: "Fecha de revisión", tipo: "date", condicion: { campo: "canal_selectivo", igual: "rojo" } },
+      { name: "fecha_aprobacion_aduana", label: "Fecha de aprobación aduana", tipo: "date", condicion: { campo: "canal_selectivo", igual: "rojo" } },
+      { name: "fecha_revision_opc", label: "Fecha de revisión por OPC", tipo: "date", condicion: { campo: "canal_selectivo", igual: "rojo" } },
+      { name: "fecha_posicionamiento_equipos", label: "Fecha de posicionamiento de equipos", tipo: "date", condicion: { campo: "canal_selectivo", igual: "rojo" } },
     ],
   },
   {
