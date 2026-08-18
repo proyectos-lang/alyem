@@ -13,13 +13,16 @@ export interface TiempoEtapa {
 
 // Tiempo promedio (en días) que transcurre en cada etapa antes de pasar a la
 // siguiente, calculado sobre los eventos de estado de todas las operaciones.
-export async function tiemposEntreProcesos(): Promise<TiempoEtapa[]> {
+export async function tiemposEntreProcesos(gestionIds?: string[]): Promise<TiempoEtapa[]> {
   const sb = getSupabase()
-  const { data } = await sb
+  if (gestionIds && gestionIds.length === 0) return []
+  let q = sb
     .from("eventos")
     .select("gestion_id, fecha_evento, estado:estados_catalogo(nombre, orden, color)")
     .eq("tipo", "estado")
     .order("fecha_evento", { ascending: true })
+  if (gestionIds) q = q.in("gestion_id", gestionIds)
+  const { data } = await q
 
   const porGestion = new Map<string, { nombre: string; orden: number; color: string; t: number }[]>()
   for (const e of (data as any[]) ?? []) {
@@ -126,10 +129,14 @@ export async function resumenBSC(gestiones: GestionConEstado[], slaObjetivo: num
     rojo: gestiones.filter((g) => g.canal_selectivo === "rojo").length,
   }
 
-  const [{ data: docs }, { data: califs }] = await Promise.all([
-    sb.from("documentos").select("estado"),
-    sb.from("calificaciones").select("estrellas"),
-  ])
+  // Docs y calificaciones acotados a las operaciones del conjunto (mismo alcance/mes).
+  const idsBsc = gestiones.map((g) => g.id)
+  const [{ data: docs }, { data: califs }] = idsBsc.length
+    ? await Promise.all([
+        sb.from("documentos").select("estado").in("gestion_id", idsBsc),
+        sb.from("calificaciones").select("estrellas").in("gestion_id", idsBsc),
+      ])
+    : [{ data: [] as { estado: string }[] }, { data: [] as { estrellas: number }[] }]
   const docsArr = (docs as { estado: string }[]) ?? []
   const califArr = (califs as { estrellas: number }[]) ?? []
   const satisfaccionPromedio = califArr.length
