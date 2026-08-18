@@ -83,7 +83,7 @@ export function NuevaGestionForm({
   const docInput = (t: TipoDocumento) => (
     <div key={t.id} className="flex flex-col gap-1.5">
       <Label className="text-xs">{t.nombre}</Label>
-      <Input name={`archivo_${t.id}`} type="file" accept="application/pdf,image/*" className="text-xs" />
+      <Input name={`archivo_${t.id}`} type="file" multiple accept="application/pdf,image/*" className="text-xs" />
     </div>
   )
 
@@ -211,6 +211,7 @@ export function NuevaGestionForm({
       )}
 
       <p className="text-xs text-muted-foreground">
+        Puedes adjuntar varios archivos por documento.{" "}
         {esAgencia
           ? "Adjunta lo que tengas disponible; podrás completar datos y documentos después desde el detalle."
           : "Ingresa el número de BL y adjunta tus documentos. Alyem registrará el resto de la información al recibirlos."}
