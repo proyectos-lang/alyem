@@ -215,11 +215,23 @@ export const OPCIONALES_AVANCE = new Set<string>([
   "fecha_posicionamiento_equipos",
   // Gate pass: fecha/hora es opcional.
   "gatepass_fecha_hora",
+  // NP (ENP): opcional para avanzar; puede quedar pendiente y diligenciarse después.
+  "numero_np",
 ])
 
 // Identificadores oficiales que NO se pueden editar una vez registrados (por nadie):
 // BL (carta_porte), número de declaración (correlativo_liquidacion) y número de ENP (numero_np).
 export const INMUTABLES = new Set<string>(["carta_porte", "correlativo_liquidacion", "numero_np"])
+
+// Etapas cuyos campos se pueden diligenciar SIEMPRE (aunque el proceso ya avanzó):
+// el intake (Paso 1) y la ENP (el número NP puede quedar pendiente y llenarse luego).
+export const ETAPAS_EDITABLES_SIEMPRE = new Set(["Notificación del embarque", "Documentos faltantes / ENP"])
+export function etapaSiempreEditable(nombre: string | null | undefined): boolean {
+  return !!nombre && ETAPAS_EDITABLES_SIEMPRE.has(nombre)
+}
+export function indiceEtapaSiempreEditable(i: number | null): boolean {
+  return i != null && i >= 0 && etapaSiempreEditable(PASOS[i]?.nombre)
+}
 
 function valorCampo(gestion: unknown, name: string): unknown {
   return (gestion as Record<string, unknown>)[name]

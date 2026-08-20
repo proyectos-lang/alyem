@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/modal"
 import { PasoForm } from "@/components/paso-form"
 import { AvanzarEtapaPaso } from "@/components/avanzar-etapa-paso"
-import { PASOS, faltantesParaAvanzar, condicionCumplida, type CampoPaso } from "@/lib/pasos"
+import { PASOS, faltantesParaAvanzar, condicionCumplida, etapaSiempreEditable, type CampoPaso } from "@/lib/pasos"
 import { fecha, fechaHora } from "@/lib/format"
 import type { Aduana, Documento, EstadoCatalogo, Gestion } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -114,14 +114,19 @@ export function ProcesoPanel({
                       {paso.nombre === "Revisión" && gestion.canal_selectivo === "verde" && (
                         <Badge variant="success">Pasa directo al levante</Badge>
                       )}
+                      {paso.nombre === "Documentos faltantes / ENP" &&
+                        (enCurso || completado) &&
+                        !gestion.numero_np && (
+                          <Badge variant="warning">NP pendiente</Badge>
+                        )}
                     </p>
                     <p className="text-xs text-muted-foreground">{paso.descripcion}</p>
                   </div>
                 </div>
                 {!editarInline && editable && paso.campos.length > 0 && (
-                  // El paso 1 (Notificación del embarque) siempre es editable por quien
-                  // pueda editar (operador incluido), aunque el proceso ya haya avanzado.
-                  enCurso || (completado && esAdmin) || i === 0 ? (
+                  // El Paso 1 (Notificación) y la ENP son editables por quien pueda editar
+                  // (operador incluido) aunque el proceso ya haya avanzado (NP pendiente).
+                  enCurso || (completado && esAdmin) || etapaSiempreEditable(paso.nombre) ? (
                     <Modal
                       title={paso.nombre}
                       className="max-w-2xl"

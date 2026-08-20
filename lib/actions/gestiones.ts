@@ -6,7 +6,7 @@ import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
 import { getConfig } from "../config"
 import { empresasVisibles } from "../data/asignaciones"
-import { faltantesParaAvanzar, etapaIndexDeCampo, etapaIndexPorNombre, INMUTABLES } from "../pasos"
+import { faltantesParaAvanzar, etapaIndexDeCampo, etapaIndexPorNombre, indiceEtapaSiempreEditable, INMUTABLES } from "../pasos"
 import { notificarAgencia, notificarEmpresa } from "./notificaciones"
 
 async function estadoIdPorNombre(patron: string): Promise<string | null> {
@@ -373,7 +373,8 @@ export async function editarDatosGestion(form: FormData) {
     const currentIndex = etapaIndexPorNombre((est as { estado_nombre?: string } | null)?.estado_nombre)
     const bloqueados = Object.keys(patch).filter((campo) => {
       const i = etapaIndexDeCampo(campo)
-      if (i === 0) return false // Paso 1 (Notificación del embarque): editable por el operador siempre.
+      // Paso 1 (Notificación) y ENP (número NP pendiente): editables por el operador siempre.
+      if (indiceEtapaSiempreEditable(i)) return false
       return i === null || (currentIndex >= 0 && i !== currentIndex)
     })
     if (bloqueados.length > 0) {
