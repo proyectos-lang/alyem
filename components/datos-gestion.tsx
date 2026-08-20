@@ -1,7 +1,7 @@
 import { fecha, fechaHora } from "@/lib/format"
 import type { GestionConEstado } from "@/lib/data/gestiones"
 
-const TIPO_OP = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" }
+const TIPO_OP = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito", duca_f: "DUCA F", transito_rapido: "Tránsito Rápido" }
 const FORMA_PAGO: Record<string, string> = {
   transferencia_pagada: "Transferencia pagada",
   transferencia_pendiente: "Transferencia pendiente",

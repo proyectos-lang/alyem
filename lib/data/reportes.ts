@@ -97,7 +97,7 @@ export async function filasReporte(
 }
 
 const CANAL: Record<string, string> = { verde: "Verde", amarillo: "Amarillo", rojo: "Rojo" }
-const TIPO_OP: Record<string, string> = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" }
+const TIPO_OP: Record<string, string> = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito", duca_f: "DUCA F", transito_rapido: "Tránsito Rápido" }
 const tri = (v: boolean | null | undefined) => (v === true ? "Sí" : v === false ? "No" : "")
 
 // Valor de una columna para una fila (mapeo al modelo).

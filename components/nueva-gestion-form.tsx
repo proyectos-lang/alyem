@@ -132,6 +132,8 @@ export function NuevaGestionForm({
                   <option value="importacion">Importación</option>
                   <option value="exportacion">Exportación</option>
                   <option value="transito">Tránsito (DUCA T)</option>
+                  <option value="duca_f">DUCA F</option>
+                  <option value="transito_rapido">Tránsito Rápido</option>
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">

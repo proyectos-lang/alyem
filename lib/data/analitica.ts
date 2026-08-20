@@ -3,7 +3,7 @@ import { estadosActuales } from "./gestiones"
 import { listarCalificaciones, promediosDimensiones, type PromedioDimension } from "./satisfaccion"
 
 const MES_CORTO = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-const TIPO_OP: Record<string, string> = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" }
+const TIPO_OP: Record<string, string> = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito", duca_f: "DUCA F", transito_rapido: "Tránsito Rápido" }
 const CANAL: Record<string, { nombre: string; color: string }> = {
   verde: { nombre: "Verde", color: "#22c55e" },
   amarillo: { nombre: "Amarillo", color: "#eab308" },

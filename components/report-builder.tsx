@@ -192,6 +192,8 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
               <option value="importacion">Importación</option>
               <option value="exportacion">Exportación</option>
               <option value="transito">Tránsito</option>
+              <option value="duca_f">DUCA F</option>
+              <option value="transito_rapido">Tránsito Rápido</option>
             </Select>
           </div>
           {regimenes.length > 0 && (

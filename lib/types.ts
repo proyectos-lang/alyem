@@ -1,7 +1,7 @@
 // Tipos del dominio (espejo del esquema en supabase/schema.sql).
 
 export type Rol = "cliente" | "operador" | "admin"
-export type TipoOperacion = "importacion" | "exportacion" | "transito"
+export type TipoOperacion = "importacion" | "exportacion" | "transito" | "duca_f" | "transito_rapido"
 export type TipoEstado = "normal" | "pausa" | "cancelada" | "final"
 export type TipoEvento = "estado" | "observacion"
 export type CanalSelectividad = "verde" | "amarillo" | "rojo"
