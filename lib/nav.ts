@@ -65,6 +65,29 @@ function grupos(rol: Rol): NavGroup[] {
     ]
   }
 
+  if (rol === "cliente_aduanero") {
+    // Sub-agencia: menú recortado. Reutiliza las páginas de agencia (ya acotadas
+    // a su subárbol por empresasVisibles) + su propia gestión de clientes.
+    return [
+      {
+        titulo: "Operación",
+        items: [
+          { href: "/agencia/gestiones", label: "Operaciones", icon: Boxes, color: "#f48029", descripcion: "Tus operaciones y las de tus clientes; crea nuevas." },
+          { href: "/agencia/documentos", label: "Documentos", icon: FolderClosed, color: "#f59e0b", descripcion: "Documentos organizados por cliente e importación." },
+          { href: "/agencia/indicadores", label: "Indicadores", icon: Gauge, permiso: P.REPORTES_VER, color: "#8b5cf6", descripcion: "Balanced Scorecard de tus operaciones." },
+          { href: "/agencia/reportes", label: "Reportes", icon: FileText, permiso: P.REPORTES_VER, color: "#10b981", descripcion: "Constructor de reportes y exportación a Excel." },
+        ],
+      },
+      {
+        titulo: "Mi agencia",
+        items: [
+          { href: "/agencia/clientes", label: "Mis clientes", icon: Building2, color: "#3b82f6", descripcion: "Alta de tus clientes finales y sus usuarios de acceso." },
+          { href: "/panel/config", label: "Configuración", icon: Settings, color: "#6b7280", descripcion: "Cambia tu contraseña y sube el logo de tu agencia." },
+        ],
+      },
+    ]
+  }
+
   const operacion: NavGroup = {
     titulo: "Operación",
     items: [
@@ -134,5 +157,6 @@ export function grupoPorSlug(rol: Rol, permisos: string[], slug: string): NavGro
 export function inicioPara(rol: Rol): string {
   if (rol === "cliente") return "/panel"
   if (rol === "operador") return "/agencia/torre"
+  if (rol === "cliente_aduanero") return "/agencia/gestiones"
   return "/admin"
 }

@@ -31,7 +31,7 @@ export default async function NuevaGestionAgencia() {
   const empresas = (emp as Empresa[]) ?? []
 
   return (
-    <PortalShell roles={["operador", "admin"]}>
+    <PortalShell roles={["operador", "admin", "cliente_aduanero"]}>
       <div className="mx-auto max-w-3xl px-4 py-6 md:px-6">
         <PageHeader titulo="Nueva operación" descripcion="Registra una operación a nombre de un cliente." />
         <div className="mt-6">

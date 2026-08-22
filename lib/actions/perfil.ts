@@ -27,7 +27,7 @@ export async function cambiarMiContrasena(form: FormData) {
 export async function subirLogoEmpresa(form: FormData) {
   const usuario = await getUsuarioActivo()
   if (!usuario) throw new Error("No hay sesión activa.")
-  if (usuario.rol !== "cliente" || !usuario.empresa_id) {
+  if ((usuario.rol !== "cliente" && usuario.rol !== "cliente_aduanero") || !usuario.empresa_id) {
     throw new Error("Solo un usuario cliente puede subir el logo de su empresa.")
   }
 
@@ -50,17 +50,19 @@ export async function subirLogoEmpresa(form: FormData) {
   if (updErr) throw new Error("No se pudo guardar el logo. ¿Ya corriste la migración supabase/19-logo-empresa.sql?")
   revalidatePath("/panel")
   revalidatePath("/panel/config")
+  revalidatePath("/agencia")
 }
 
 // Quita el logo (vuelve a solo el de Alyem).
 export async function quitarLogoEmpresa() {
   const usuario = await getUsuarioActivo()
   if (!usuario) throw new Error("No hay sesión activa.")
-  if (usuario.rol !== "cliente" || !usuario.empresa_id) {
+  if ((usuario.rol !== "cliente" && usuario.rol !== "cliente_aduanero") || !usuario.empresa_id) {
     throw new Error("Solo un usuario cliente puede quitar el logo de su empresa.")
   }
   const sb = getSupabase()
   await sb.from("empresas").update({ logo_url: null }).eq("id", usuario.empresa_id)
   revalidatePath("/panel")
   revalidatePath("/panel/config")
+  revalidatePath("/agencia")
 }

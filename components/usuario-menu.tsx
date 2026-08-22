@@ -7,7 +7,7 @@ import { Popover } from "@/components/ui/popover"
 import { cerrarSesion } from "@/lib/actions/auth"
 import type { Rol, Usuario } from "@/lib/types"
 
-const ROL_LABEL: Record<Rol, string> = { cliente: "Cliente", operador: "Operador", admin: "Administrador" }
+const ROL_LABEL: Record<Rol, string> = { cliente: "Cliente", operador: "Operador", admin: "Administrador", cliente_aduanero: "Cliente aduanero" }
 
 export function UsuarioMenu({ usuario }: { usuario: Usuario }) {
   const router = useRouter()

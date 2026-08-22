@@ -39,7 +39,7 @@ export default async function ReportesAgencia({ searchParams }: { searchParams: 
   ])
 
   return (
-    <PortalShell roles={["operador", "admin"]}>
+    <PortalShell roles={["operador", "admin", "cliente_aduanero"]}>
       <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6">
         <PageHeader
           titulo="Reportes"

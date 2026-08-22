@@ -73,19 +73,24 @@ export async function crearGestion(form: FormData): Promise<string> {
   const sb = getSupabase()
 
   const desdeAgencia = usuario!.rol === "operador" || usuario!.rol === "admin"
-  const empresaId = desdeAgencia ? ((form.get("empresa_id") as string) || null) : usuario!.empresa_id
+  // El cliente aduanero elige la empresa (como la agencia), pero NO es agencia:
+  // no queda como operador y la operación nace como intake (Alyem la procesa).
+  const esCA = usuario!.rol === "cliente_aduanero"
+  const eligeEmpresa = desdeAgencia || esCA
+  const empresaId = eligeEmpresa ? ((form.get("empresa_id") as string) || null) : usuario!.empresa_id
   if (!empresaId) {
-    throw new Error(desdeAgencia ? "Selecciona la empresa cliente." : "Tu usuario no está asociado a una empresa.")
+    throw new Error(eligeEmpresa ? "Selecciona la empresa cliente." : "Tu usuario no está asociado a una empresa.")
   }
 
-  // Anti-bypass: un operador restringido solo puede crear a nombre de sus clientes asignados.
+  // Anti-bypass: operador restringido / cliente aduanero solo pueden crear a nombre
+  // de las empresas de su alcance (empresasVisibles).
   const vis = await empresasVisibles(usuario!)
   if (vis && !vis.includes(empresaId)) {
-    throw new Error("Ese cliente no está asignado a tu usuario.")
+    throw new Error("Ese cliente no está en tu alcance.")
   }
 
   let consignatario = usuario!.empresa?.nombre ?? null
-  if (desdeAgencia) {
+  if (eligeEmpresa) {
     const { data: emp } = await sb.from("empresas").select("nombre").eq("id", empresaId).maybeSingle()
     consignatario = (emp?.nombre as string) ?? null
   }
@@ -124,7 +129,9 @@ export async function crearGestion(form: FormData): Promise<string> {
     estado_id: estadoPaso1,
     observacion: desdeAgencia
       ? `Operación registrada por la agencia a nombre de ${consignatario ?? "el cliente"}.`
-      : "Notificación del embarque creada por el cliente.",
+      : esCA
+        ? `Operación creada por ${usuario!.nombre} (cliente aduanero) a nombre de ${consignatario ?? "su cliente"}.`
+        : "Notificación del embarque creada por el cliente.",
     usuario_id: usuario!.id,
   })
 

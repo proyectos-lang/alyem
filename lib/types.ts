@@ -1,6 +1,6 @@
 // Tipos del dominio (espejo del esquema en supabase/01-schema.sql).
 
-export type Rol = "cliente" | "operador" | "admin"
+export type Rol = "cliente" | "operador" | "admin" | "cliente_aduanero"
 export type TipoOperacion = "importacion" | "exportacion" | "transito" | "duca_f" | "transito_rapido"
 export type TipoEstado = "normal" | "pausa" | "cancelada" | "final"
 export type TipoEvento = "estado" | "observacion"
@@ -19,6 +19,9 @@ export interface Empresa {
   codigo_sn: string | null
   telefono_1: string | null
   logo_url: string | null
+  // Si la empresa es cliente final de un cliente aduanero, apunta a la empresa
+  // de ese cliente aduanero. null = cliente directo de Alyem.
+  cliente_aduanero_id: string | null
   activo: boolean
   created_at: string
 }

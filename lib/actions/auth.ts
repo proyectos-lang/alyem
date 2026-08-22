@@ -38,7 +38,8 @@ export async function iniciarSesion(
 
   const rol = u.rol as Rol
   const esCorporativo = rol === "operador" || rol === "admin"
-  if (tipo === "cliente" && rol !== "cliente")
+  // El cliente aduanero y sus clientes finales entran por el acceso de clientes.
+  if (tipo === "cliente" && rol !== "cliente" && rol !== "cliente_aduanero")
     return { ok: false, error: "Esta cuenta no es de cliente. Usa el acceso corporativo." }
   if (tipo === "corporativo" && !esCorporativo)
     return { ok: false, error: "Esta cuenta no es corporativa. Usa el acceso clientes." }
@@ -88,7 +89,11 @@ export async function iniciarSesion(
   return {
     ok: true,
     nombre: (u.nombre as string) ?? nombreUsuario,
-    destino: rol === "cliente" ? "/panel" : rol === "admin" ? "/admin" : "/agencia",
+    destino:
+      rol === "cliente" ? "/panel"
+      : rol === "admin" ? "/admin"
+      : rol === "cliente_aduanero" ? "/agencia/gestiones"
+      : "/agencia",
   }
 }
 

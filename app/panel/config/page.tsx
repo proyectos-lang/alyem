@@ -21,7 +21,7 @@ export default async function ConfigCliente() {
   }
 
   return (
-    <PortalShell roles={["cliente"]}>
+    <PortalShell roles={["cliente", "cliente_aduanero"]}>
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6">
         <PageHeader titulo="Configuración" descripcion="Gestiona tu contraseña y el logo de tu empresa." />
         <div className="mt-6 flex flex-col gap-6">
@@ -33,7 +33,7 @@ export default async function ConfigCliente() {
             <CardHeader><CardTitle>Logo de la empresa</CardTitle></CardHeader>
             <CardContent>
               <p className="mb-3 text-xs text-muted-foreground">
-                Se mostrará junto al logo de Alyem en tu portal. Recomendado: PNG con fondo transparente (máx. 2 MB).
+                Se mostrará en el encabezado de tu portal. Recomendado: PNG con fondo transparente (máx. 2 MB).
               </p>
               <LogoEmpresaForm logoUrl={logoUrl} />
             </CardContent>

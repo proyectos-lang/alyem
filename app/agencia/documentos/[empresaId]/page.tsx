@@ -29,7 +29,7 @@ export default async function DocumentosCliente({
   const nombre = vis && !vis.includes(empresaId) ? null : await nombreEmpresa(empresaId)
   if (!nombre) {
     return (
-      <PortalShell roles={["operador", "admin"]}>
+      <PortalShell roles={["operador", "admin", "cliente_aduanero"]}>
         <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-muted-foreground">Cliente no encontrado.</div>
       </PortalShell>
     )
@@ -42,7 +42,7 @@ export default async function DocumentosCliente({
   }
 
   return (
-    <PortalShell roles={["operador", "admin"]}>
+    <PortalShell roles={["operador", "admin", "cliente_aduanero"]}>
       <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6">
         <RutaCarpetas items={[{ label: "Documentos", href: "/agencia/documentos" }, { label: nombre }]} />
         <h1 className="text-xl font-semibold tracking-tight">{nombre}</h1>

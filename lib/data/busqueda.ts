@@ -36,9 +36,9 @@ export async function busquedaGlobal(
     .limit(8)
   if (vis) qg = qg.in("empresa_id", vis)
 
-  // 2) Clientes (solo agencia; operador restringido → solo sus clientes)
+  // 2) Clientes (agencia o cliente aduanero; acotado por `vis` a sus empresas).
   let qc: PromiseLike<{ data: { id: string; nombre: string; id_fiscal: string | null }[] | null }>
-  if (agencia) {
+  if (agencia || usuario.rol === "cliente_aduanero") {
     let e = sb.from("empresas").select("id, nombre, id_fiscal").or(`nombre.ilike.${like},id_fiscal.ilike.${like}`).order("nombre").limit(8)
     if (vis) e = e.in("id", vis)
     qc = e

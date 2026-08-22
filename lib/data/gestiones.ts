@@ -118,8 +118,8 @@ export async function getEventos(gestionId: string, usuario: Pick<Usuario, "rol"
     .eq("gestion_id", gestionId)
     .order("fecha_evento", { ascending: false })
 
-  // El cliente no ve eventos internos.
-  if (usuario.rol === "cliente") q = q.eq("interno", false)
+  // El cliente (y el cliente aduanero) no ven eventos internos de Alyem.
+  if (usuario.rol === "cliente" || usuario.rol === "cliente_aduanero") q = q.eq("interno", false)
   const { data } = await q
   return (data as Evento[]) ?? []
 }

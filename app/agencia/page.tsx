@@ -12,6 +12,7 @@ import { SetupNotice } from "@/components/setup-notice"
 import { puede, PERMISOS } from "@/lib/permisos"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
+import { marcasClienteAduanero } from "@/lib/data/asignaciones"
 import { ordenarGestiones } from "@/lib/sort"
 import { getSupabase } from "@/lib/supabase/server"
 import { fecha } from "@/lib/format"
@@ -26,6 +27,8 @@ export default async function BandejaAgencia({ searchParams }: { searchParams: P
   const gestiones = ordenarGestiones(await listarGestiones(usuario, { texto: q }), sort, dir)
   const solicitudes = gestiones.filter((g) => g.estado?.nombre === "Notificación del embarque")
   const activas = gestiones.filter((g) => g.estado?.tipo !== "final" && g.estado?.tipo !== "cancelada")
+  // Marca diferencial de cliente aduanero (Alyem la ve al procesar).
+  const marcas = await marcasClienteAduanero(gestiones.map((g) => g.empresa_id))
 
   const sb = getSupabase()
   const { count: docsPorRevisar } = await sb
@@ -72,6 +75,11 @@ export default async function BandejaAgencia({ searchParams }: { searchParams: P
                     <p className="font-medium">
                       {g.referencia} · <span className="font-normal text-muted-foreground">{g.empresa?.nombre}</span>
                     </p>
+                    {marcas.get(g.empresa_id) && (
+                      <span className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                        Cliente aduanero: {marcas.get(g.empresa_id)!.caNombre}
+                      </span>
+                    )}
                     <p className="truncate text-xs text-muted-foreground">{g.descripcion_carga ?? "Sin descripción"}</p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -89,7 +97,7 @@ export default async function BandejaAgencia({ searchParams }: { searchParams: P
             <h2 className="text-sm font-semibold">Gestiones activas</h2>
             <Buscador />
           </div>
-          <GestionesTabla gestiones={activas} mostrarEmpresa />
+          <GestionesTabla gestiones={activas} mostrarEmpresa marcas={marcas} />
         </div>
       </div>
     </PortalShell>

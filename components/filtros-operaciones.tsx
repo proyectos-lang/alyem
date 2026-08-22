@@ -16,7 +16,15 @@ const CANALES = [
   { value: "rojo", label: "Rojo" },
 ]
 
-export function FiltrosOperaciones({ estados, aduanas }: { estados: EstadoCatalogo[]; aduanas: Aduana[] }) {
+export function FiltrosOperaciones({
+  estados,
+  aduanas,
+  clientesAduaneros = [],
+}: {
+  estados: EstadoCatalogo[]
+  aduanas: Aduana[]
+  clientesAduaneros?: { id: string; nombre: string }[]
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -24,6 +32,7 @@ export function FiltrosOperaciones({ estados, aduanas }: { estados: EstadoCatalo
   const estado = params.get("estado") ?? ""
   const aduana = params.get("aduana") ?? ""
   const canal = params.get("canal") ?? ""
+  const ca = params.get("ca") ?? ""
 
   const [guardados, setGuardados] = useState<FiltroGuardado[]>([])
   const [sel, setSel] = useState("")
@@ -58,6 +67,7 @@ export function FiltrosOperaciones({ estados, aduanas }: { estados: EstadoCatalo
     p.delete("estado")
     p.delete("aduana")
     p.delete("canal")
+    p.delete("ca")
     router.replace(`${pathname}?${p.toString()}`)
     setSel("")
   }
@@ -87,7 +97,7 @@ export function FiltrosOperaciones({ estados, aduanas }: { estados: EstadoCatalo
     setSel("")
   }
 
-  const hayFiltro = !!(estado || aduana || canal)
+  const hayFiltro = !!(estado || aduana || canal || ca)
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2.5">
@@ -112,6 +122,15 @@ export function FiltrosOperaciones({ estados, aduanas }: { estados: EstadoCatalo
           <option key={c.value} value={c.value}>{c.label}</option>
         ))}
       </Select>
+      {clientesAduaneros.length > 0 && (
+        <Select value={ca} onChange={(e) => set("ca", e.target.value)} className="h-8 w-48 text-sm">
+          <option value="">Cliente aduanero: todos</option>
+          <option value="__all__">Solo clientes aduaneros</option>
+          {clientesAduaneros.map((c) => (
+            <option key={c.id} value={c.id}>{c.nombre}</option>
+          ))}
+        </Select>
+      )}
       {hayFiltro && (
         <Button size="sm" variant="ghost" onClick={limpiar}>Limpiar</Button>
       )}

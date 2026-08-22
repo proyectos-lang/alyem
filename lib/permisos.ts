@@ -66,6 +66,16 @@ const DEFAULTS: Record<Rol, ClavePermiso[]> = {
     P.MENSAJE_ENVIAR,
     P.REPORTES_VER,
   ],
+  // Cliente aduanero (sub-agencia): crea clientes y operaciones a su nombre y las
+  // consulta (Alyem las procesa). Ve solo su subárbol (vía empresasVisibles);
+  // no avanza etapas ni acepta documentos.
+  cliente_aduanero: [
+    P.GESTION_CREAR,
+    P.GESTION_VER_TODAS,
+    P.DOCUMENTO_SUBIR,
+    P.MENSAJE_ENVIAR,
+    P.REPORTES_VER,
+  ],
   admin: Object.values(PERMISOS),
 }
 
@@ -99,4 +109,10 @@ export function exigir(
   }
 }
 
+// Agencia = Alyem (procesa las operaciones). El cliente aduanero NO es agencia:
+// sus operaciones nacen como intake y sus documentos como "pendiente" (los
+// acepta Alyem).
 export const esAgencia = (rol: Rol) => rol === "operador" || rol === "admin"
+
+// Cliente aduanero (sub-agencia con su propio subárbol de clientes finales).
+export const esClienteAduanero = (rol: Rol) => rol === "cliente_aduanero"

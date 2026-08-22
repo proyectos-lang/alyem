@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowLeft, Pencil, Building2, Landmark, Ship, Container, CalendarClock } from "lucide-react"
+import { ArrowLeft, Pencil, Building2, Landmark, Ship, Container, CalendarClock, Briefcase } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -32,6 +32,7 @@ import {
 import { getTiposDocumento } from "@/lib/data/catalogos"
 import { listarAduanas } from "@/lib/data/aduanas"
 import { listarRegimenes } from "@/lib/data/regimenes"
+import { marcasClienteAduanero } from "@/lib/data/asignaciones"
 import { puede, esAgencia, PERMISOS } from "@/lib/permisos"
 import { fecha } from "@/lib/format"
 
@@ -67,6 +68,8 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
     listarRegimenes(),
   ])
   const agencia = esAgencia(usuario.rol)
+  // Marca diferencial: si la empresa es cliente de un cliente aduanero, Alyem lo ve.
+  const marcaCA = agencia ? (await marcasClienteAduanero([g.empresa_id])).get(g.empresa_id) : undefined
   const docsPendientes = requeridos.filter((r) => !r.cumplido).length
   const esFinal = g.estado?.tipo === "final" || g.estado?.tipo === "cancelada"
 
@@ -100,6 +103,14 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                   <h1 className="text-xl font-semibold tracking-tight">{g.referencia}</h1>
                   <EstadoChip nombre={g.estado?.nombre} color={g.estado?.color} />
                   <DiasLibresBadge gestion={g} />
+                  {marcaCA && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300"
+                      title="Operación de un cliente aduanero"
+                    >
+                      <Briefcase className="size-3.5" /> Cliente aduanero: {marcaCA.caNombre}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                   {agencia && (

@@ -28,7 +28,7 @@ export default async function DocumentosImportacion({
   const [g, nombre] = await Promise.all([getGestion(gestionId, usuario), nombreEmpresa(empresaId)])
   if (!g) {
     return (
-      <PortalShell roles={["operador", "admin"]}>
+      <PortalShell roles={["operador", "admin", "cliente_aduanero"]}>
         <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-muted-foreground">Importación no encontrada.</div>
       </PortalShell>
     )
@@ -41,7 +41,7 @@ export default async function DocumentosImportacion({
   }
 
   return (
-    <PortalShell roles={["operador", "admin"]}>
+    <PortalShell roles={["operador", "admin", "cliente_aduanero"]}>
       <div className="mx-auto max-w-[1100px] px-4 py-6 md:px-6">
         <RutaCarpetas
           items={[

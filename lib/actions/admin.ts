@@ -86,7 +86,7 @@ export async function guardarUsuario(form: FormData) {
     usuario: String(form.get("usuario") ?? "").trim().toLowerCase(),
     email: String(form.get("email") ?? "").trim().toLowerCase() || null,
     rol,
-    empresa_id: rol === "cliente" ? empresaId : null,
+    empresa_id: rol === "cliente" || rol === "cliente_aduanero" ? empresaId : null,
     permisos: usarDefaults ? null : permisosSel,
     activo: true,
   }

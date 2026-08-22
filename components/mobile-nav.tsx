@@ -12,6 +12,7 @@ const PRIMARIAS: Record<Rol, string[]> = {
   cliente: ["/panel", "/panel/gestiones", "/panel/documentos", "/panel/reportes"],
   operador: ["/agencia/torre", "/agencia/gestiones", "/agencia/documentos", "/agencia/alertas"],
   admin: ["/admin", "/agencia/gestiones", "/agencia/documentos", "/agencia/alertas"],
+  cliente_aduanero: ["/agencia/gestiones", "/agencia/clientes", "/agencia/documentos", "/agencia/reportes"],
 }
 
 export function MobileNav({ rol, permisos, onMenu }: { rol: Rol; permisos: string[]; onMenu: () => void }) {

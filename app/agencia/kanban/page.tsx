@@ -7,6 +7,7 @@ import { TableroVista } from "@/components/tablero-vista"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
+import { marcasClienteAduanero } from "@/lib/data/asignaciones"
 import { ordenarGestiones } from "@/lib/sort"
 import { getEstados } from "@/lib/data/catalogos"
 
@@ -19,6 +20,7 @@ export default async function KanbanPage({ searchParams }: { searchParams: Promi
   const esLista = vista === "lista"
 
   const [gestiones, estados] = await Promise.all([listarGestiones(usuario), getEstados()])
+  const marcas = await marcasClienteAduanero(gestiones.map((g) => g.empresa_id))
   // Columnas: estados normales y final, en orden; se omiten pausa/cancelada.
   const columnas = estados.filter((e) => e.tipo === "normal" || e.tipo === "final")
 
@@ -35,7 +37,7 @@ export default async function KanbanPage({ searchParams }: { searchParams: Promi
         <PageHeader titulo="Tablero" descripcion="Carga de trabajo por estado, de un vistazo." acciones={<TableroVista />} />
         {esLista ? (
           <div className="mt-6">
-            <GestionesTabla gestiones={ordenarGestiones(gestiones, sort, dir)} mostrarEmpresa />
+            <GestionesTabla gestiones={ordenarGestiones(gestiones, sort, dir)} mostrarEmpresa marcas={marcas} />
           </div>
         ) : (
         <div className="mt-6 flex gap-3 overflow-x-auto pb-4">

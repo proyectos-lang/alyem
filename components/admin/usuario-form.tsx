@@ -56,8 +56,8 @@ export function UsuarioForm({
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
-    if (rol === "cliente" && !empresaId) {
-      setError("Selecciona la empresa del cliente.")
+    if ((rol === "cliente" || rol === "cliente_aduanero") && !empresaId) {
+      setError(rol === "cliente_aduanero" ? "Selecciona la empresa del cliente aduanero." : "Selecciona la empresa del cliente.")
       return
     }
     const fd = new FormData(e.currentTarget)
@@ -109,13 +109,14 @@ export function UsuarioForm({
           <Label htmlFor="rol">Rol</Label>
           <Select id="rol" name="rol" value={rol} onChange={(e) => cambiarRol(e.target.value as Rol)}>
             <option value="cliente">Cliente</option>
+            <option value="cliente_aduanero">Cliente aduanero</option>
             <option value="operador">Operador</option>
             <option value="admin">Administrador</option>
           </Select>
         </div>
-        {rol === "cliente" && (
+        {(rol === "cliente" || rol === "cliente_aduanero") && (
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="empresa_id">Empresa</Label>
+            <Label htmlFor="empresa_id">{rol === "cliente_aduanero" ? "Empresa (agencia)" : "Empresa"}</Label>
             <Combobox
               id="empresa_id"
               name="empresa_id"

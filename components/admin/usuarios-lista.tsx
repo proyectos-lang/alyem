@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Pencil, ChevronDown, Search, Users, Building2, Shield } from "lucide-react"
+import { Pencil, ChevronDown, Search, Users, Building2, Shield, Briefcase } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -17,6 +17,7 @@ import type { Empresa, Rol, Usuario } from "@/lib/types"
 
 const GRUPOS: { rol: Rol; titulo: string; icon: typeof Users }[] = [
   { rol: "cliente", titulo: "Clientes", icon: Building2 },
+  { rol: "cliente_aduanero", titulo: "Clientes aduaneros", icon: Briefcase },
   { rol: "operador", titulo: "Operadores", icon: Users },
   { rol: "admin", titulo: "Administradores", icon: Shield },
 ]
@@ -51,7 +52,7 @@ export function UsuariosLista({
         if (!heno.includes(t)) return false
       }
       if (emp) {
-        if (u.rol === "cliente") return u.empresa_id === emp
+        if (u.rol === "cliente" || u.rol === "cliente_aduanero") return u.empresa_id === emp
         if (u.rol === "operador") return (asignados[u.id] ?? []).includes(emp)
         return false // admin no tiene empresa
       }
@@ -73,7 +74,8 @@ export function UsuariosLista({
       const n = asignados[u.id]?.length ?? 0
       return n === 0 ? "Todos los clientes" : `${n} cliente${n === 1 ? "" : "s"}`
     }
-    if (u.rol === "cliente") return u.empresa?.nombre ?? (u.empresa_id ? empresaNombre.get(u.empresa_id) ?? "—" : "—")
+    if (u.rol === "cliente" || u.rol === "cliente_aduanero")
+      return u.empresa?.nombre ?? (u.empresa_id ? empresaNombre.get(u.empresa_id) ?? "—" : "—")
     return "—"
   }
 
@@ -93,7 +95,7 @@ export function UsuariosLista({
           />
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          {(["todos", "cliente", "operador", "admin"] as const).map((r) => (
+          {(["todos", "cliente", "cliente_aduanero", "operador", "admin"] as const).map((r) => (
             <button
               key={r}
               type="button"
@@ -105,7 +107,7 @@ export function UsuariosLista({
                   : "border-border bg-background hover:bg-muted",
               )}
             >
-              {r === "todos" ? "Todos" : r === "cliente" ? "Clientes" : r === "operador" ? "Operadores" : "Administradores"}
+              {r === "todos" ? "Todos" : r === "cliente" ? "Clientes" : r === "cliente_aduanero" ? "Clientes aduaneros" : r === "operador" ? "Operadores" : "Administradores"}
             </button>
           ))}
         </div>

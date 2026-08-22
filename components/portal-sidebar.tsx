@@ -14,6 +14,7 @@ export function PortalSidebar({
   permisos,
   agencia,
   logoEmpresa = null,
+  logoModo = "junto",
   open,
   onClose,
 }: {
@@ -21,11 +22,16 @@ export function PortalSidebar({
   permisos: string[]
   agencia: string
   logoEmpresa?: string | null
+  logoModo?: "junto" | "reemplazo"
   open: boolean
   onClose: () => void
 }) {
   const pathname = usePathname()
   const groups = navFiltrado(rol, permisos)
+
+  // Marca blanca: si el modo es "reemplazo" y hay logo, sustituye al de Alyem.
+  const reemplazaMarca = logoModo === "reemplazo" && !!logoEmpresa
+  const inicio = rol === "cliente" ? "/panel" : rol === "admin" ? "/admin" : "/agencia"
 
   const activo = (href: string) =>
     href === pathname || (href !== "/panel" && href !== "/agencia" && href !== "/admin" && pathname.startsWith(href))
@@ -73,13 +79,21 @@ export function PortalSidebar({
         )}
       >
         <div className="flex h-14 items-center justify-between gap-2 border-b border-sidebar-border px-4">
-          <Link href={`/${rol === "cliente" ? "panel" : rol === "operador" ? "agencia" : "admin"}`} onClick={onClose} className="flex min-w-0 items-center gap-2">
-            <Logo size="md" />
-            {logoEmpresa && (
+          <Link href={inicio} onClick={onClose} className="flex min-w-0 items-center gap-2">
+            {reemplazaMarca ? (
+              // Marca blanca: solo el logo de la sub-agencia (sustituye al de Alyem).
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoEmpresa!} alt="Logo" className="h-8 w-auto max-w-[150px] shrink-0 object-contain" />
+            ) : (
               <>
-                <span className="h-6 w-px shrink-0 bg-border" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoEmpresa} alt="Logo de la empresa" className="h-7 w-auto max-w-[84px] shrink-0 object-contain" />
+                <Logo size="md" />
+                {logoEmpresa && (
+                  <>
+                    <span className="h-6 w-px shrink-0 bg-border" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={logoEmpresa} alt="Logo de la empresa" className="h-7 w-auto max-w-[84px] shrink-0 object-contain" />
+                  </>
+                )}
               </>
             )}
             <span className="sr-only">{agencia} — Seguimiento aduanero</span>
