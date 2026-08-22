@@ -56,6 +56,12 @@ function grupos(rol: Rol): NavGroup[] {
           { href: "/panel/reportes", label: "Reportes", icon: BarChart3, permiso: P.REPORTES_VER, color: "#10b981", descripcion: "Arma reportes a tu medida y expórtalos a Excel." },
         ],
       },
+      {
+        titulo: "Mi cuenta",
+        items: [
+          { href: "/panel/config", label: "Configuración", icon: Settings, color: "#6b7280", descripcion: "Cambia tu contraseña y sube el logo de tu empresa." },
+        ],
+      },
     ]
   }
 

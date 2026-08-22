@@ -1,4 +1,4 @@
-// Tipos del dominio (espejo del esquema en supabase/schema.sql).
+// Tipos del dominio (espejo del esquema en supabase/01-schema.sql).
 
 export type Rol = "cliente" | "operador" | "admin"
 export type TipoOperacion = "importacion" | "exportacion" | "transito" | "duca_f" | "transito_rapido"
@@ -18,6 +18,7 @@ export interface Empresa {
   cuenta: string | null
   codigo_sn: string | null
   telefono_1: string | null
+  logo_url: string | null
   activo: boolean
   created_at: string
 }

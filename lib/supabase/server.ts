@@ -26,6 +26,7 @@ export function getSupabase(): SupabaseClient {
 }
 
 export const ADJUNTOS_BUCKET = process.env.SUPABASE_BUCKET ?? "aylem"
+export const LOGOS_BUCKET = process.env.SUPABASE_LOGOS_BUCKET ?? "alyem-logos"
 
 // Devuelve una URL firmada temporal para un archivo del bucket privado.
 export async function urlFirmada(path: string | null, segundos = 3600): Promise<string | null> {
