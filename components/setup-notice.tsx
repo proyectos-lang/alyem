@@ -19,8 +19,8 @@ export function SetupNotice({ mensaje }: { mensaje: string }) {
             <code className="rounded bg-muted px-1">.env.local</code> y coloca la URL y el service role key.
           </li>
           <li>
-            Ejecuta <code className="rounded bg-muted px-1">supabase/schema.sql</code> y luego{" "}
-            <code className="rounded bg-muted px-1">supabase/seed.sql</code> en el SQL Editor.
+            Ejecuta <code className="rounded bg-muted px-1">supabase/01-schema.sql</code> y luego{" "}
+            <code className="rounded bg-muted px-1">supabase/02-seed.sql</code> en el SQL Editor.
           </li>
           <li>Crea un bucket privado llamado <code className="rounded bg-muted px-1">adjuntos</code>.</li>
           <li>Reinicia el servidor de desarrollo.</li>

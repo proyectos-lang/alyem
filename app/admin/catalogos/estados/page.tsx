@@ -136,7 +136,7 @@ export default async function CatalogosPage() {
               </Modal>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
-              {regimenes.length === 0 && <p className="text-sm text-muted-foreground">Corre <code>supabase/analitica.sql</code> para habilitar los regímenes.</p>}
+              {regimenes.length === 0 && <p className="text-sm text-muted-foreground">Corre <code>supabase/09-analitica.sql</code> para habilitar los regímenes.</p>}
               {regimenes.map((r) => (
                 <Badge key={r.id} variant="secondary">{r.nombre}</Badge>
               ))}

@@ -32,7 +32,7 @@ select * from (values
 ) as v(nombre, orden)
 where not exists (select 1 from regimenes);
 
--- 3) Auditoría de las tablas nuevas (adjunta el trigger si ya corriste mejoras.sql).
+-- 3) Auditoría de las tablas nuevas (adjunta el trigger si ya corriste 06-mejoras.sql).
 do $$
 declare t text;
 begin

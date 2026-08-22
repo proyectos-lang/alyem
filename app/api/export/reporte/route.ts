@@ -51,7 +51,7 @@ export async function GET(req: Request) {
     try {
       await getSupabase().from("reportes_instantaneas").insert({ definicion_id: def, generado_por: usuario.id, filas: filas.length })
     } catch {
-      /* la tabla puede no existir aún si no se ha corrido mejoras.sql */
+      /* la tabla puede no existir aún si no se ha corrido 06-mejoras.sql */
     }
   }
 

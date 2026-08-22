@@ -1,14 +1,14 @@
 -- ============================================================================
 -- Alyem Customs — Seed base (sin datos transaccionales ni clientes).
 -- Carga: staff de Alyem, configuración, los 13 estados, tipos de documento y un
--- listado inicial de aduanas. Ejecutar DESPUÉS de schema.sql.
+-- listado inicial de aduanas. Ejecutar DESPUÉS de 01-schema.sql.
 -- El resto (empresas, usuarios cliente, operaciones) se crea desde la app.
 -- ============================================================================
 
 set search_path to aylem;
 
 -- Limpieza previa (idempotente): permite reejecutar el seed sin conflictos.
--- Requiere que schema.sql ya haya creado las tablas del nuevo modelo.
+-- Requiere que 01-schema.sql ya haya creado las tablas del nuevo modelo.
 delete from usuarios;
 delete from configuracion;
 delete from estados_catalogo;

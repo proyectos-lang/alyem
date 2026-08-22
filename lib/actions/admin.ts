@@ -26,7 +26,7 @@ export async function guardarEmpresa(form: FormData) {
   if (!filaBase.nombre) throw new Error("El nombre es obligatorio.")
 
   // Campos adicionales (Cuenta, Código SN, Teléfono 1). Si las columnas aún no
-  // existen (pre-migración empresas-campos.sql), se guarda solo la base.
+  // existen (pre-migración 15-empresas-campos.sql), se guarda solo la base.
   const fila = {
     ...filaBase,
     cuenta: (form.get("cuenta") as string) || null,

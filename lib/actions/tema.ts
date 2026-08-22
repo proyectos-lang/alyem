@@ -15,7 +15,7 @@ export async function guardarTema(tema: "dark" | "light") {
     try {
       await getSupabase().from("usuarios").update({ tema }).eq("id", usuario.id)
     } catch {
-      /* la columna puede no existir aún si no se corrió tema.sql */
+      /* la columna puede no existir aún si no se corrió 11-tema.sql */
     }
   }
 }
