@@ -62,6 +62,7 @@ function DetalleAuditoria({ r }: { r: RegistroAuditoria }) {
       {/* Resumen */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
+          { l: "BL", v: r.bl ?? "—" },
           { l: "Operación", v: OP_TEXTO[r.operacion] ?? r.operacion },
           { l: "Tabla", v: r.tabla },
           { l: "Usuario", v: r.usuario?.nombre ?? "—" },
@@ -107,7 +108,7 @@ function DetalleAuditoria({ r }: { r: RegistroAuditoria }) {
 export default async function AuditoriaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; tabla?: string; operacion?: string; desde?: string; hasta?: string; p?: string }>
+  searchParams: Promise<{ tab?: string; tabla?: string; operacion?: string; bl?: string; desde?: string; hasta?: string; p?: string }>
 }) {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver la auditoría." />
@@ -118,7 +119,7 @@ export default async function AuditoriaPage({
       </PortalShell>
     )
   }
-  const { tab, tabla, operacion, desde, hasta, p } = await searchParams
+  const { tab, tabla, operacion, bl, desde, hasta, p } = await searchParams
   const vista = tab === "sesiones" ? "sesiones" : "cambios"
   const pagina = Number(p ?? "0")
 
@@ -149,7 +150,7 @@ export default async function AuditoriaPage({
         </div>
 
         {vista === "cambios" ? (
-          <VistaCambios tabla={tabla} operacion={operacion} desde={desde} hasta={hasta} pagina={pagina} />
+          <VistaCambios tabla={tabla} operacion={operacion} bl={bl} desde={desde} hasta={hasta} pagina={pagina} />
         ) : (
           <VistaSesiones />
         )}
@@ -160,16 +161,17 @@ export default async function AuditoriaPage({
 
 // ---- Vista: cambios ----------------------------------------------------------
 async function VistaCambios({
-  tabla, operacion, desde, hasta, pagina,
-}: { tabla?: string; operacion?: string; desde?: string; hasta?: string; pagina: number }) {
+  tabla, operacion, bl, desde, hasta, pagina,
+}: { tabla?: string; operacion?: string; bl?: string; desde?: string; hasta?: string; pagina: number }) {
   const [{ filas, hayMas }, tablas] = await Promise.all([
-    listarAuditoria({ tabla, operacion, desde, hasta, pagina }),
+    listarAuditoria({ tabla, operacion, bl, desde, hasta, pagina }),
     tablasAuditadas(),
   ])
   const qs = (extra: Record<string, string>) => {
     const sp = new URLSearchParams({ tab: "cambios" })
     if (tabla) sp.set("tabla", tabla)
     if (operacion) sp.set("operacion", operacion)
+    if (bl) sp.set("bl", bl)
     if (desde) sp.set("desde", desde)
     if (hasta) sp.set("hasta", hasta)
     for (const [k, v] of Object.entries(extra)) sp.set(k, v)
@@ -197,6 +199,10 @@ async function VistaCambios({
           </Select>
         </div>
         <div className="flex flex-col gap-1">
+          <Label className="text-xs">BL</Label>
+          <Input name="bl" defaultValue={bl ?? ""} placeholder="Número de BL" className="h-9 w-44" />
+        </div>
+        <div className="flex flex-col gap-1">
           <Label className="text-xs">Desde</Label>
           <Input type="date" name="desde" defaultValue={desde ?? ""} className="h-9" />
         </div>
@@ -213,6 +219,7 @@ async function VistaCambios({
           <TableHeader>
             <TableRow>
               <TableHead>Fecha</TableHead>
+              <TableHead>BL</TableHead>
               <TableHead>Tabla</TableHead>
               <TableHead>Operación</TableHead>
               <TableHead>Usuario</TableHead>
@@ -224,6 +231,7 @@ async function VistaCambios({
             {filas.map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="whitespace-nowrap text-muted-foreground">{fechaHora(r.creado)}</TableCell>
+                <TableCell className="font-mono text-xs">{r.bl ?? "—"}</TableCell>
                 <TableCell className="font-medium">{r.tabla}</TableCell>
                 <TableCell><Badge variant={OP_BADGE[r.operacion] ?? "muted"}>{r.operacion}</Badge></TableCell>
                 <TableCell className="text-muted-foreground">{r.usuario?.nombre ?? "—"}</TableCell>
@@ -237,7 +245,7 @@ async function VistaCambios({
             ))}
             {filas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                   Sin registros. (¿Ya corriste las migraciones de auditoría?)
                 </TableCell>
               </TableRow>
@@ -323,7 +331,7 @@ async function VistaSesiones() {
             {sesiones.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                  Sin inicios de sesión registrados. (¿Ya corriste <code>supabase/auditoria-ip.sql</code>?)
+                  Sin inicios de sesión registrados. (¿Ya corriste <code>supabase/07-auditoria-ip.sql</code>?)
                 </TableCell>
               </TableRow>
             )}

@@ -7,6 +7,7 @@ export interface RegistroAuditoria {
   registro_id: string | null
   usuario_id: string | null
   ip: string | null
+  bl: string | null
   datos_antes: Record<string, unknown> | null
   datos_despues: Record<string, unknown> | null
   cambios: Record<string, { antes: unknown; despues: unknown }> | null
@@ -32,6 +33,7 @@ export interface FiltrosAuditoria {
   tabla?: string
   operacion?: string
   usuarioId?: string
+  bl?: string
   desde?: string
   hasta?: string
   pagina?: number
@@ -51,6 +53,7 @@ export async function listarAuditoria(f: FiltrosAuditoria = {}): Promise<{ filas
   if (f.tabla) q = q.eq("tabla", f.tabla)
   if (f.operacion) q = q.eq("operacion", f.operacion)
   if (f.usuarioId) q = q.eq("usuario_id", f.usuarioId)
+  if (f.bl?.trim()) q = q.ilike("bl", `%${f.bl.trim()}%`)
   if (f.desde) q = q.gte("creado", f.desde)
   if (f.hasta) q = q.lte("creado", `${f.hasta}T23:59:59`)
 
