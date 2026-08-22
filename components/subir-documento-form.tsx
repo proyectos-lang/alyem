@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { useModalClose } from "@/components/ui/modal"
 import { toast } from "sonner"
-import { subirDocumento } from "@/lib/actions/documentos"
+import { registrarDocumento } from "@/lib/actions/documentos"
+import { firmarSubidaAdjunto } from "@/lib/actions/adjuntos"
+import { getSupabaseBrowser } from "@/lib/supabase/client"
 import type { TipoDocumento } from "@/lib/types"
 
 export function SubirDocumentoForm({
@@ -29,10 +31,21 @@ export function SubirDocumentoForm({
     e.preventDefault()
     setError(null)
     const fd = new FormData(e.currentTarget)
-    fd.set("gestion_id", gestionId)
+    const tipoId = (fd.get("tipo_documento_id") as string) || null
+    const file = fd.get("archivo") as File | null
+    if (!file || file.size === 0) {
+      setError("Selecciona un archivo.")
+      return
+    }
     startTransition(async () => {
       try {
-        await subirDocumento(fd)
+        // Sube directo a Storage (navegador → Supabase), evitando el límite de body (413).
+        const { bucket, path, token } = await firmarSubidaAdjunto(gestionId, file.name)
+        const sb = getSupabaseBrowser()
+        if (!sb) throw new Error("No se pudo inicializar la subida.")
+        const up = await sb.storage.from(bucket).uploadToSignedUrl(path, token, file, { contentType: file.type || undefined })
+        if (up.error) throw new Error(up.error.message)
+        await registrarDocumento(gestionId, tipoId, path, file.name)
         toast.success("Documento subido.")
         close()
         router.refresh()

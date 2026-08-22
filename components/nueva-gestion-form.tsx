@@ -12,6 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Modal, useModalClose } from "@/components/ui/modal"
 import { toast } from "sonner"
 import { crearGestion } from "@/lib/actions/gestiones"
+import { firmarSubidaAdjunto, registrarAdjunto } from "@/lib/actions/adjuntos"
+import { getSupabaseBrowser } from "@/lib/supabase/client"
 import { crearClienteRapido } from "@/lib/actions/clientes"
 import type { Aduana, Empresa, TipoDocumento } from "@/lib/types"
 import type { Regimen } from "@/lib/data/regimenes"
@@ -50,6 +52,7 @@ export function NuevaGestionForm({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [panama, setPanama] = useState(false)
+  const [subiendo, setSubiendo] = useState<{ i: number; total: number } | null>(null)
 
   const esAgencia = !!empresas
   const [empresasLocal, setEmpresasLocal] = useState<Pick<Empresa, "id" | "nombre">[]>(empresas ?? [])
@@ -68,12 +71,45 @@ export function NuevaGestionForm({
     }
     const fd = new FormData(e.currentTarget)
     if (esAgencia) fd.set("empresa_id", empresaId)
+
+    // Los archivos NO se envían por el server action (límite de body de Vercel → 413).
+    // Se suben directo del navegador a Storage tras crear la operación.
+    const archivos: { tipoId: string; file: File }[] = []
+    for (const key of [...new Set(fd.keys())].filter((k) => k.startsWith("archivo_"))) {
+      const tipoId = key.slice("archivo_".length)
+      for (const v of fd.getAll(key)) if (v instanceof File && v.size > 0) archivos.push({ tipoId, file: v })
+      fd.delete(key)
+    }
+
     startTransition(async () => {
       try {
         const id = await crearGestion(fd)
-        toast.success("Operación creada correctamente.")
+        // Subir cada adjunto directo a Storage (navegador → Supabase, sin server action).
+        // Secuencial, con progreso por archivo; si uno falla, sigue con los demás.
+        const fallidos: string[] = []
+        for (let i = 0; i < archivos.length; i++) {
+          const { tipoId, file } = archivos[i]
+          setSubiendo({ i: i + 1, total: archivos.length })
+          try {
+            const { bucket, path, token } = await firmarSubidaAdjunto(id, file.name)
+            const sb = getSupabaseBrowser()
+            if (!sb) throw new Error("No se pudo inicializar la subida.")
+            const up = await sb.storage.from(bucket).uploadToSignedUrl(path, token, file, { contentType: file.type || undefined })
+            if (up.error) throw new Error(up.error.message)
+            await registrarAdjunto(id, tipoId || null, path, file.name)
+          } catch {
+            fallidos.push(file.name)
+          }
+        }
+        setSubiendo(null)
+        if (fallidos.length) {
+          toast.warning(`Operación creada, pero fallaron ${fallidos.length} adjunto(s): ${fallidos.join(", ")}. Puedes volver a subirlos desde el detalle.`)
+        } else {
+          toast.success("Operación creada correctamente.")
+        }
         router.push(`/g/${id}`)
       } catch (err) {
+        setSubiendo(null)
         setError((err as Error).message)
         toast.error((err as Error).message)
       }
@@ -221,7 +257,9 @@ export function NuevaGestionForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
-        <Button type="submit" disabled={pending}>{pending ? "Creando…" : "Crear operación"}</Button>
+        <Button type="submit" disabled={pending}>
+          {subiendo ? `Subiendo ${subiendo.i} de ${subiendo.total}…` : pending ? "Creando…" : "Crear operación"}
+        </Button>
       </div>
     </form>
   )

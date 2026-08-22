@@ -77,6 +77,65 @@ export async function subirDocumento(form: FormData) {
   revalidatePath(`/g/${gestionId}`)
 }
 
+// Registra un documento YA subido a Storage (el navegador lo sube directo con una
+// URL firmada). Misma lógica que subirDocumento pero sin recibir el archivo, para
+// evitar el límite de body de las funciones serverless (413).
+export async function registrarDocumento(
+  gestionId: string,
+  tipoId: string | null,
+  path: string,
+  nombreArchivo: string,
+) {
+  const usuario = await getUsuarioActivo()
+  exigir(usuario, PERMISOS.DOCUMENTO_SUBIR)
+  const sb = getSupabase()
+
+  // Versionado: si ya hay un documento del mismo tipo, este lo reemplaza.
+  let version = 1
+  let reemplazaA: string | null = null
+  if (tipoId) {
+    const { data: prev } = await sb
+      .from("documentos")
+      .select("id, version")
+      .eq("gestion_id", gestionId)
+      .eq("tipo_documento_id", tipoId)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (prev) {
+      version = (prev.version as number) + 1
+      reemplazaA = prev.id as string
+    }
+  }
+
+  const { error } = await sb.from("documentos").insert({
+    gestion_id: gestionId,
+    tipo_documento_id: tipoId,
+    contexto: "gestion",
+    nombre_archivo: nombreArchivo,
+    storage_path: path,
+    estado: esAgencia(usuario!.rol) ? "aceptado" : "pendiente",
+    version,
+    reemplaza_a: reemplazaA,
+    subido_por: usuario!.id,
+  })
+  if (error) throw new Error(error.message)
+
+  if (tipoId) {
+    await sb.from("documentos_requeridos").update({ cumplido: true }).eq("gestion_id", gestionId).eq("tipo_documento_id", tipoId)
+  }
+
+  const { data: g } = await sb.from("gestiones").select("empresa_id, referencia").eq("id", gestionId).single()
+  if (g) {
+    if (esAgencia(usuario!.rol)) {
+      await notificarEmpresa(g.empresa_id, "documento", `La agencia subió un documento a ${g.referencia}.`, gestionId)
+    } else {
+      await notificarAgencia("documento_subido", `${usuario!.nombre} subió un documento a ${g.referencia}.`, gestionId)
+    }
+  }
+  revalidatePath(`/g/${gestionId}`)
+}
+
 // Operador define qué documentos requiere del cliente (checklist).
 export async function definirRequeridos(form: FormData) {
   const usuario = await getUsuarioActivo()
