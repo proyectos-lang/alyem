@@ -29,7 +29,9 @@ async function empresaEnSubarbol(empresaId: string, caEmpresaId: string): Promis
 }
 
 // --- Empresas cliente final --------------------------------------------------
-export async function guardarSubclienteEmpresa(form: FormData) {
+// Crea/edita la empresa y, al CREAR, opcionalmente su primer usuario de acceso
+// (campos usuario_login / usuario_password) en el mismo paso. Devuelve el id.
+export async function guardarSubclienteEmpresa(form: FormData): Promise<{ id: string }> {
   const usuario = await actorCA()
   const sb = getSupabase()
   const id = (form.get("id") as string) || null
@@ -43,18 +45,41 @@ export async function guardarSubclienteEmpresa(form: FormData) {
   }
   if (!fila.nombre) throw new Error("El nombre es obligatorio.")
 
+  let empresaId = id
   if (id) {
     if (!(await empresaEnSubarbol(id, usuario.empresa_id))) throw new Error("Ese cliente no pertenece a tu agencia.")
     const { error } = await sb.from("empresas").update(fila).eq("id", id)
     if (error) throw new Error(error.message)
   } else {
-    const { error } = await sb
+    const { data, error } = await sb
       .from("empresas")
       .insert({ ...fila, activo: true, cliente_aduanero_id: usuario.empresa_id })
+      .select("id")
+      .single()
     if (error) throw new Error(error.message)
+    empresaId = data.id as string
+
+    // Usuario de acceso opcional en el mismo alta.
+    const login = String(form.get("usuario_login") ?? "").trim().toLowerCase()
+    const password = String(form.get("usuario_password") ?? "").trim()
+    if (login || password) {
+      if (!login || !password) throw new Error("Para crear el acceso, indica usuario y contraseña.")
+      const { error: uErr } = await sb.from("usuarios").insert({
+        nombre: String(form.get("usuario_nombre") ?? "").trim() || fila.nombre,
+        usuario: login,
+        email: null,
+        rol: "cliente",
+        empresa_id: empresaId,
+        permisos: null,
+        activo: true,
+        password,
+      })
+      if (uErr) throw new Error(`Cliente creado, pero el usuario falló: ${uErr.message}`)
+    }
   }
 
   revalidatePath("/agencia/clientes")
+  return { id: empresaId as string }
 }
 
 // --- Usuarios de acceso de los clientes finales ------------------------------

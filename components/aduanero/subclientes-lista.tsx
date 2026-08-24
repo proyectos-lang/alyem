@@ -71,9 +71,14 @@ export function SubclientesLista({
               </div>
 
               {usuarios.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  Este cliente todavía no tiene usuarios de acceso.
-                </p>
+                <div className="flex flex-col items-center gap-3 px-4 py-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Este cliente todavía no tiene usuarios de acceso.
+                  </p>
+                  <Modal title="Nuevo usuario del cliente" trigger={<Button size="sm"><UserPlus /> Crear usuario de acceso</Button>}>
+                    <SubclienteUsuarioForm empresaId={emp.id} />
+                  </Modal>
+                </div>
               ) : (
                 <Table>
                   <TableHeader>

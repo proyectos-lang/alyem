@@ -63,6 +63,31 @@ export function SubclienteEmpresaForm({ empresa }: { empresa?: Empresa }) {
         Cliente activo
       </label>
 
+      {/* Al crear: usuario de acceso opcional (para que el cliente pueda entrar). */}
+      {!empresa && (
+        <div className="rounded-lg border border-border p-3">
+          <p className="text-sm font-medium">Usuario de acceso (opcional)</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Crea aquí el usuario y contraseña para que este cliente pueda ingresar y montar sus operaciones.
+            También puedes agregarlo después con el botón “Usuario”.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="usuario_nombre">Nombre de la persona</Label>
+              <Input id="usuario_nombre" name="usuario_nombre" placeholder="Opcional" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="usuario_login">Usuario (para iniciar sesión)</Label>
+              <Input id="usuario_login" name="usuario_login" autoCapitalize="none" />
+            </div>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label htmlFor="usuario_password">Contraseña</Label>
+              <Input id="usuario_password" name="usuario_password" type="text" placeholder="Déjalo vacío si no quieres crear acceso ahora" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={pending}>{pending ? "Guardando…" : "Guardar"}</Button>
