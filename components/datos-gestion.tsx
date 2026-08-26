@@ -37,13 +37,15 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
         <Dato label="Naviera" valor={g.naviera} />
         <Dato label="ETA" valor={fecha(g.eta)} />
         <Dato label="Proveedor" valor={g.proveedor} />
-        <Dato label="Número de factura" valor={g.numero_factura} />
+        <Dato label="Número(s) de factura" valor={g.numero_factura ? <span className="whitespace-pre-line">{g.numero_factura}</span> : null} />
+        <Dato label="Número de orden de compra" valor={g.numero_orden_compra} />
+        <Dato label="Número de pedido" valor={g.numero_pedido} />
         <Dato label="Contenedor(es)" valor={g.contenedores} />
         <Dato label="Proviene de Panamá" valor={g.proviene_panama ? "Sí" : "No"} />
       </dl>
       <dl>
         <Dato label="Descripción de la carga" valor={g.descripcion_carga} />
-        <Dato label="Origen de la carga" valor={g.origen_carga} />
+        <Dato label="Origen(es) de la carga" valor={g.origen_carga ? <span className="whitespace-pre-line">{g.origen_carga}</span> : null} />
         <Dato label="Marca" valor={g.marca} />
         <Dato label="Modelo(s)" valor={g.modelo ? <span className="whitespace-pre-line">{g.modelo}</span> : null} />
         <Dato label="Término de compra" valor={g.termino_compra} />
@@ -51,6 +53,8 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
         <Dato label="Valor FOB" valor={num(g.valor_fob)} />
         <Dato label="Flete" valor={num(g.valor_flete)} />
         <Dato label="Seguro" valor={num(g.valor_seguro)} />
+        <Dato label="Tiempo de días libres" valor={g.tiempo_libre_dias != null ? `${g.tiempo_libre_dias} día(s)` : null} />
+        <Dato label="Fin de días libres" valor={fecha(g.fecha_fin_dias_libres)} />
       </dl>
       <dl>
         <Dato label="N.º de NP (ENP)" valor={g.numero_np} />

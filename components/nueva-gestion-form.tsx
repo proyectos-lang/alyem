@@ -158,6 +158,14 @@ export function NuevaGestionForm({
             <Label>Número de BL / documento de transporte</Label>
             <Input name="numero_bl" required placeholder="Se usará como referencia de la operación" />
           </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Número de orden de compra</Label>
+            <Input name="numero_orden_compra" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Número de pedido</Label>
+            <Input name="numero_pedido" />
+          </div>
 
           {/* Resto de datos: solo la agencia los registra al recibir */}
           {esAgencia && (
@@ -205,8 +213,8 @@ export function NuevaGestionForm({
                 <Input name="proveedor" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label>Número de factura</Label>
-                <Input name="numero_factura" />
+                <Label>Número(s) de factura</Label>
+                <Textarea name="numero_factura" rows={2} placeholder="Uno por línea si son varias" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label>Contenedor(es)</Label>

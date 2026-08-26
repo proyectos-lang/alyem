@@ -48,7 +48,9 @@ export const PASOS: Paso[] = [
       { name: "eta", label: "ETA", tipo: "date" },
       { name: "aduana_id", label: "Aduana de ingreso", tipo: "aduana" },
       { name: "proveedor", label: "Proveedor", tipo: "text" },
-      { name: "numero_factura", label: "Número de factura", tipo: "text" },
+      { name: "numero_factura", label: "Número(s) de factura — uno por línea", tipo: "textarea" },
+      { name: "numero_orden_compra", label: "Número de orden de compra", tipo: "text" },
+      { name: "numero_pedido", label: "Número de pedido", tipo: "text" },
       { name: "contenedores", label: "Contenedor(es)", tipo: "text" },
     ],
     docs: [
@@ -69,7 +71,7 @@ export const PASOS: Paso[] = [
       { name: "otros_gastos", label: "Otros gastos", tipo: "num" },
       { name: "termino_compra", label: "Término de compra (Incoterm)", tipo: "text" },
       { name: "descripcion_carga", label: "Descripción de la carga", tipo: "textarea" },
-      { name: "origen_carga", label: "Origen de la carga", tipo: "text" },
+      { name: "origen_carga", label: "Origen(es) de la carga — uno por línea", tipo: "textarea" },
       { name: "marca", label: "Marca", tipo: "text" },
       { name: "modelo", label: "Modelo(s) — uno por línea", tipo: "textarea" },
       { name: "forma_pago", label: "Forma de pago", tipo: "select", opciones: FORMA_PAGO },
@@ -202,6 +204,8 @@ export const OPCIONALES_AVANCE = new Set<string>([
   "forma_pago_otro",
   "previa",
   "descripcion_carga", // heredado del intake (Paso 1)
+  "numero_orden_compra", // opcional
+  "numero_pedido", // opcional
   "fecha_fin_dias_libres", // se calcula solo / puede no aplicar
   // Campos DUCA T: opcionales, no bloquean el avance.
   "razon_social",

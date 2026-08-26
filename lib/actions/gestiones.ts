@@ -95,9 +95,11 @@ export async function crearGestion(form: FormData): Promise<string> {
     consignatario = (emp?.nombre as string) ?? null
   }
 
-  // Referencia = número de BL (si está disponible y es único); si no, correlativo GES-YYYY-NNNN.
+  // Referencia = SIEMPRE el número de BL cuando se proporciona (requisito del
+  // negocio: la referencia es el BL). El correlativo GES-YYYY-NNNN queda solo
+  // como respaldo cuando aún no hay BL.
   const bl = ((form.get("numero_bl") as string) || "").trim()
-  const referencia = bl && !(await existeReferencia(bl)) ? bl : await siguienteReferencia()
+  const referencia = bl || (await siguienteReferencia())
 
   const g = {
     referencia,
@@ -112,13 +114,21 @@ export async function crearGestion(form: FormData): Promise<string> {
     regimen_id: (form.get("regimen_id") as string) || null,
     proveedor: (form.get("proveedor") as string) || null,
     numero_factura: (form.get("numero_factura") as string) || null,
+    numero_orden_compra: (form.get("numero_orden_compra") as string) || null,
+    numero_pedido: (form.get("numero_pedido") as string) || null,
     carta_porte: bl || null,
     proviene_panama: form.get("proviene_panama") === "on" || form.get("proviene_panama") === "true",
     descripcion_carga: (form.get("descripcion_carga") as string) || null,
   }
-  const { data, error } = await sb.from("gestiones").insert(g).select("id").single()
-  if (error) throw new Error(error.message)
-  const gestionId = data.id as string
+  let { data, error } = await sb.from("gestiones").insert(g).select("id").single()
+  // Resiliencia: si las columnas nuevas aún no están migradas, reintenta sin ellas.
+  if (error) {
+    const { numero_orden_compra: _oc, numero_pedido: _pd, ...gBase } = g
+    const r = await sb.from("gestiones").insert(gBase).select("id").single()
+    if (r.error) throw new Error(r.error.message)
+    data = r.data
+  }
+  const gestionId = data!.id as string
 
   await subirAdjuntosDeForm(form, gestionId, usuario!.id, desdeAgencia)
 
@@ -309,7 +319,7 @@ const TEXT = [
   "consignatario", "contenedores", "naviera", "proveedor", "numero_factura", "termino_compra",
   "descripcion_carga", "origen_carga", "marca", "modelo", "forma_pago_otro", "razon_social",
   "rtn", "numeros_factura", "carta_porte", "numero_np", "correlativo_liquidacion",
-  "naviera_observaciones", "gatepass_observacion",
+  "naviera_observaciones", "gatepass_observacion", "numero_orden_compra", "numero_pedido",
 ]
 const NUM = ["valor_fob", "valor_flete", "valor_seguro", "otros_gastos", "kilos", "bultos", "tiempo_libre_dias"]
 const DATE = [
@@ -324,7 +334,7 @@ const TRISTATE = [
   "transporte_naviera", "gatepass_entregado",
 ]
 // Columnas que pueden no estar migradas aún; si el update falla, se reintenta sin ellas.
-const POSIBLES_SIN_MIGRAR = ["duca_t"]
+const POSIBLES_SIN_MIGRAR = ["duca_t", "numero_orden_compra", "numero_pedido"]
 
 export async function editarDatosGestion(form: FormData) {
   const usuario = await getUsuarioActivo()

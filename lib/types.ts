@@ -84,6 +84,8 @@ export interface Gestion {
   regimen_id: string | null
   proveedor: string | null
   numero_factura: string | null
+  numero_orden_compra: string | null
+  numero_pedido: string | null
   proviene_panama: boolean
 
   // Paso 2 — Revisión y registro de datos (Alyem)

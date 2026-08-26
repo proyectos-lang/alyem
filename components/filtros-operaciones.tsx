@@ -15,6 +15,13 @@ const CANALES = [
   { value: "amarillo", label: "Amarillo" },
   { value: "rojo", label: "Rojo" },
 ]
+const TIPOS = [
+  { value: "importacion", label: "Importación" },
+  { value: "exportacion", label: "Exportación" },
+  { value: "transito", label: "Tránsito" },
+  { value: "duca_f", label: "DUCA F" },
+  { value: "transito_rapido", label: "Tránsito Rápido" },
+]
 
 export function FiltrosOperaciones({
   estados,
@@ -32,6 +39,7 @@ export function FiltrosOperaciones({
   const estado = params.get("estado") ?? ""
   const aduana = params.get("aduana") ?? ""
   const canal = params.get("canal") ?? ""
+  const tipo = params.get("tipo") ?? ""
   const ca = params.get("ca") ?? ""
 
   const [guardados, setGuardados] = useState<FiltroGuardado[]>([])
@@ -67,6 +75,7 @@ export function FiltrosOperaciones({
     p.delete("estado")
     p.delete("aduana")
     p.delete("canal")
+    p.delete("tipo")
     p.delete("ca")
     router.replace(`${pathname}?${p.toString()}`)
     setSel("")
@@ -97,13 +106,19 @@ export function FiltrosOperaciones({
     setSel("")
   }
 
-  const hayFiltro = !!(estado || aduana || canal || ca)
+  const hayFiltro = !!(estado || aduana || canal || tipo || ca)
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2.5">
       <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Filter className="size-3.5" /> Filtros
       </span>
+      <Select value={tipo} onChange={(e) => set("tipo", e.target.value)} className="h-8 w-44 text-sm">
+        <option value="">Tipo: todos</option>
+        {TIPOS.map((t) => (
+          <option key={t.value} value={t.value}>{t.label}</option>
+        ))}
+      </Select>
       <Select value={estado} onChange={(e) => set("estado", e.target.value)} className="h-8 w-44 text-sm">
         <option value="">Estado: todos</option>
         {estados.map((s) => (

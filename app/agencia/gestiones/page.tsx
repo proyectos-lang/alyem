@@ -20,18 +20,18 @@ export const dynamic = "force-dynamic"
 export default async function GestionesAgencia({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; dir?: string; estado?: string; aduana?: string; canal?: string; ca?: string }>
+  searchParams: Promise<{ q?: string; sort?: string; dir?: string; estado?: string; aduana?: string; canal?: string; tipo?: string; ca?: string }>
 }) {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver las gestiones." />
-  const { q, sort, dir, estado, aduana, canal, ca } = await searchParams
+  const { q, sort, dir, estado, aduana, canal, tipo, ca } = await searchParams
 
   const [todas, estados, aduanas] = await Promise.all([
     listarGestiones(usuario, { texto: q }),
     getEstadosCatalogo(),
     listarAduanas(true),
   ])
-  let filtradas = filtrarGestiones(todas, { estado, aduana, canal })
+  let filtradas = filtrarGestiones(todas, { estado, aduana, canal, tipo })
 
   // Marca diferencial de cliente aduanero: solo la ve Alyem (operador/admin).
   const marcas = esAgencia(usuario.rol)
