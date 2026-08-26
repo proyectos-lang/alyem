@@ -113,8 +113,8 @@ export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; ad
           <Textarea name="descripcion_carga" rows={2} defaultValue={g.descripcion_carga ?? ""} />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label>Origen(es) de la carga — uno por línea</Label>
-          <Textarea name="origen_carga" rows={2} defaultValue={g.origen_carga ?? ""} placeholder="Uno por línea si son varios" />
+          <Label>Origen(es) de la carga</Label>
+          <FacturasInput name="origen_carga" defaultValue={g.origen_carga ?? ""} addLabel="Agregar origen" placeholder="Origen" />
         </div>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}

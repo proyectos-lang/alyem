@@ -108,7 +108,7 @@ export function PasoForm({
           // Inmutable: BL / declaración / ENP no se editan una vez registrados.
           const inmutable = INMUTABLES.has(c.name) && val(c.name) != null && val(c.name) !== ""
           return (
-          <div key={c.name} className={`flex flex-col gap-1.5 ${c.tipo === "textarea" || c.tipo === "facturas" ? "sm:col-span-2" : ""}`}>
+          <div key={c.name} className={`flex flex-col gap-1.5 ${c.tipo === "textarea" || c.tipo === "lista" ? "sm:col-span-2" : ""}`}>
             <Label className="text-xs">{c.label}</Label>
             {c.tipo === "text" && (
               <Input
@@ -123,7 +123,9 @@ export function PasoForm({
             {c.tipo === "date" && <Input name={c.name} type="date" defaultValue={iso(val(c.name))} />}
             {c.tipo === "datetime" && <Input name={c.name} type="datetime-local" defaultValue={isoLocal(val(c.name))} />}
             {c.tipo === "textarea" && <Textarea name={c.name} rows={2} defaultValue={(val(c.name) as string) ?? ""} />}
-            {c.tipo === "facturas" && <FacturasInput name={c.name} defaultValue={(val(c.name) as string) ?? ""} />}
+            {c.tipo === "lista" && (
+              <FacturasInput name={c.name} defaultValue={(val(c.name) as string) ?? ""} addLabel={c.addLabel} placeholder={c.placeholder} />
+            )}
             {c.tipo === "tristate" && (
               <Select
                 name={c.name}
