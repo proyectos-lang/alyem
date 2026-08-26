@@ -54,7 +54,7 @@ export const PASOS: Paso[] = [
       { name: "numero_factura", label: "Número(s) de factura", tipo: "lista", addLabel: "Agregar factura", placeholder: "N.º de factura" },
       { name: "numero_orden_compra", label: "Número de orden de compra", tipo: "text" },
       { name: "numero_pedido", label: "Número de pedido", tipo: "text" },
-      { name: "contenedores", label: "Contenedor(es)", tipo: "text" },
+      { name: "contenedores", label: "Contenedor(es)", tipo: "lista", addLabel: "Agregar contenedor", placeholder: "N.º de contenedor" },
     ],
     docs: [
       "Documento de transporte", "Factura comercial", "Traducción / descripción de la carga",

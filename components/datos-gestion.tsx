@@ -40,7 +40,7 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
         <Dato label="Número(s) de factura" valor={g.numero_factura ? <span className="whitespace-pre-line">{g.numero_factura}</span> : null} />
         <Dato label="Número de orden de compra" valor={g.numero_orden_compra} />
         <Dato label="Número de pedido" valor={g.numero_pedido} />
-        <Dato label="Contenedor(es)" valor={g.contenedores} />
+        <Dato label="Contenedor(es)" valor={g.contenedores ? <span className="whitespace-pre-line">{g.contenedores}</span> : null} />
         <Dato label="Proviene de Panamá" valor={g.proviene_panama ? "Sí" : "No"} />
       </dl>
       <dl>

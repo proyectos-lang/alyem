@@ -217,9 +217,9 @@ export function NuevaGestionForm({
                 <Label>Número(s) de factura</Label>
                 <FacturasInput />
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
                 <Label>Contenedor(es)</Label>
-                <Input name="contenedores" />
+                <FacturasInput name="contenedores" addLabel="Agregar contenedor" placeholder="N.º de contenedor" />
               </div>
               <div className="flex flex-col gap-1.5 sm:col-span-2">
                 <Label>Descripción de la carga</Label>

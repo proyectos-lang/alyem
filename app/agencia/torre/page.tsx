@@ -13,6 +13,8 @@ import { TorreTendencias } from "@/components/torre-tendencias"
 import { TorreEtas } from "@/components/torre-etas"
 import { TorreRiesgo } from "@/components/torre-riesgo"
 import { BanerAtencion } from "@/components/baner-atencion"
+import { ResumenOperadorCliente } from "@/components/resumen-operador-cliente"
+import { agruparPorOperadorCliente } from "@/lib/agrupaciones"
 import { Reveal } from "@/components/ui/reveal"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
@@ -256,6 +258,12 @@ export default async function TorreControl({ searchParams }: { searchParams: Pro
             </TableBody>
           </Table>
         </Card>
+
+        {/* Resumen por operador y cliente */}
+        <div className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold">Resumen por operador y cliente</h2>
+          <ResumenOperadorCliente grupos={agruparPorOperadorCliente(gestiones)} />
+        </div>
 
         {/* Próximos arribos por ETA */}
         <div className="mt-6">

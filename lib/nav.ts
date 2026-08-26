@@ -18,6 +18,7 @@ import {
   TriangleAlert,
   ScrollText,
   LineChart,
+  ClipboardList,
 } from "lucide-react"
 import type { Rol } from "./types"
 import { PERMISOS, type ClavePermiso } from "./permisos"
@@ -91,6 +92,7 @@ function grupos(rol: Rol): NavGroup[] {
   const operacion: NavGroup = {
     titulo: "Operación",
     items: [
+      { href: "/agencia/mi-espacio", label: "Mi espacio", icon: ClipboardList, color: "#6366f1", descripcion: "Tu tabla de control personal por cliente, con columnas a tu medida." },
       { href: "/agencia/torre", label: "Torre de control", icon: Radar, permiso: P.GESTION_VER_TODAS, color: "#8b5cf6", descripcion: "Vista integral de operaciones, tiempos y tendencias." },
       { href: "/agencia/alertas", label: "Alertas", icon: TriangleAlert, permiso: P.GESTION_VER_TODAS, color: "#ef4444", descripcion: "Operaciones críticas: días libres, canal rojo y estancadas." },
       { href: "/agencia", label: "Bandeja", icon: Inbox, color: "#0ea5e9", descripcion: "Lo que requiere tu atención hoy y solicitudes nuevas." },

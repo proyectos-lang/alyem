@@ -38,7 +38,13 @@ import { fecha } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
 
-const TIPO_LABEL = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" } as const
+const TIPO_LABEL: Record<string, string> = {
+  importacion: "Importación",
+  exportacion: "Exportación",
+  transito: "Tránsito",
+  duca_f: "DUCA F",
+  transito_rapido: "Tránsito Rápido",
+}
 
 export default async function DetalleGestion({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await usuarioActivoSeguro()
@@ -164,7 +170,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
             <StatCard label="Aduana" value={g.aduana ? `${g.aduana.nombre}` : "—"} icon={Landmark} />
             <StatCard label="Naviera" value={g.naviera ?? "—"} icon={Ship} />
             <StatCard label="ETA" value={fecha(g.eta)} icon={CalendarClock} />
-            <StatCard label="Contenedor" value={<span className="font-mono text-base">{g.contenedores ?? "—"}</span>} icon={Container} />
+            <StatCard label="Contenedor" value={<span className="whitespace-pre-line font-mono text-base">{g.contenedores ?? "—"}</span>} icon={Container} />
           </div>
         )}
 
@@ -189,7 +195,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
               </div>
               <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 border-t border-border pt-3 sm:grid-cols-2">
                 {DIMENSIONES.map((d) => {
-                  const v = (calificacion as Record<string, unknown>)[d.key] as number | null
+                  const v = (calificacion as unknown as Record<string, unknown>)[d.key] as number | null
                   if (v == null) return null
                   return (
                     <div key={d.key} className="flex items-center justify-between gap-3 text-sm">

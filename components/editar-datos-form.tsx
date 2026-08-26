@@ -100,9 +100,9 @@ export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; ad
           <Label>Número(s) de factura</Label>
           <FacturasInput defaultValue={g.numero_factura ?? ""} />
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
           <Label>Contenedor(es)</Label>
-          <Input name="contenedores" defaultValue={g.contenedores ?? ""} />
+          <FacturasInput name="contenedores" defaultValue={g.contenedores ?? ""} addLabel="Agregar contenedor" placeholder="N.º de contenedor" />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>Consignatario</Label>

@@ -1,12 +1,14 @@
 import Link from "next/link"
-import { Plus, Download } from "lucide-react"
+import { Plus, Download, UserRound, Building2 } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Buscador } from "@/components/buscador"
 import { GestionesTabla } from "@/components/gestiones-tabla"
 import { FiltrosOperaciones } from "@/components/filtros-operaciones"
 import { TipoOperacionTabs } from "@/components/tipo-operacion-tabs"
+import { AgruparOperaciones } from "@/components/agrupar-operaciones"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones, getEstadosCatalogo } from "@/lib/data/gestiones"
@@ -15,17 +17,19 @@ import { ordenarGestiones } from "@/lib/sort"
 import { filtrarGestiones } from "@/lib/filtros"
 import { puede, esAgencia, PERMISOS } from "@/lib/permisos"
 import { marcasClienteAduanero } from "@/lib/data/asignaciones"
+import { seccionesPorOperador, seccionesPorCliente, seccionesPorOperadorCliente } from "@/lib/agrupaciones"
 
 export const dynamic = "force-dynamic"
 
 export default async function GestionesAgencia({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; dir?: string; estado?: string; aduana?: string; canal?: string; tipo?: string; ca?: string }>
+  searchParams: Promise<{ q?: string; sort?: string; dir?: string; estado?: string; aduana?: string; canal?: string; tipo?: string; ca?: string; group?: string }>
 }) {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver las gestiones." />
-  const { q, sort, dir, estado, aduana, canal, tipo, ca } = await searchParams
+  const { q, sort, dir, estado, aduana, canal, tipo, ca, group: groupRaw } = await searchParams
+  const group = ["operador", "cliente", "operador_cliente"].includes(groupRaw ?? "") ? groupRaw : ""
 
   const [todas, estados, aduanas] = await Promise.all([
     listarGestiones(usuario, { texto: q }),
@@ -80,7 +84,45 @@ export default async function GestionesAgencia({
           <Buscador />
           <TipoOperacionTabs />
           <FiltrosOperaciones estados={estados} aduanas={aduanas} clientesAduaneros={clientesAduaneros} />
-          <GestionesTabla gestiones={gestiones} mostrarEmpresa marcas={marcas} />
+          <AgruparOperaciones />
+          {group === "operador_cliente" ? (
+            <div className="flex flex-col gap-6">
+              {seccionesPorOperadorCliente(gestiones).map((op) => (
+                <div key={op.id} className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2 border-b border-border pb-1">
+                    <UserRound className="size-4 text-muted-foreground" />
+                    <h3 className="text-sm font-semibold">{op.operador}</h3>
+                    <Badge variant="muted">{op.total}</Badge>
+                  </div>
+                  {op.clientes.map((cli) => (
+                    <div key={cli.id} className="flex flex-col gap-2 md:pl-3">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="size-3.5 text-muted-foreground" />
+                        <span className="text-sm font-medium">{cli.label}</span>
+                        <Badge variant="muted">{cli.items.length}</Badge>
+                      </div>
+                      <GestionesTabla gestiones={cli.items} marcas={marcas} />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : group === "operador" || group === "cliente" ? (
+            <div className="flex flex-col gap-6">
+              {(group === "operador" ? seccionesPorOperador(gestiones) : seccionesPorCliente(gestiones)).map((s) => (
+                <div key={s.id} className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 border-b border-border pb-1">
+                    {group === "operador" ? <UserRound className="size-4 text-muted-foreground" /> : <Building2 className="size-4 text-muted-foreground" />}
+                    <h3 className="text-sm font-semibold">{s.label}</h3>
+                    <Badge variant="muted">{s.items.length}</Badge>
+                  </div>
+                  <GestionesTabla gestiones={s.items} mostrarEmpresa={group === "operador"} marcas={marcas} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <GestionesTabla gestiones={gestiones} mostrarEmpresa marcas={marcas} />
+          )}
         </div>
       </div>
     </PortalShell>
