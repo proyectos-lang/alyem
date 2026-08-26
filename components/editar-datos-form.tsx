@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useModalClose } from "@/components/ui/modal"
 import { toast } from "sonner"
 import { editarDatosGestion } from "@/lib/actions/gestiones"
+import { FacturasInput } from "@/components/facturas-input"
 import type { Aduana, Gestion } from "@/lib/types"
 import type { Regimen } from "@/lib/data/regimenes"
 
@@ -76,6 +77,14 @@ export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; ad
           <Input name="numero_bl" defaultValue={g.carta_porte ?? ""} placeholder="Se usará como referencia" />
         </div>
         <div className="flex flex-col gap-1.5">
+          <Label>Número de orden de compra</Label>
+          <Input name="numero_orden_compra" defaultValue={g.numero_orden_compra ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Número de pedido</Label>
+          <Input name="numero_pedido" defaultValue={g.numero_pedido ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
           <Label>Naviera</Label>
           <Input name="naviera" defaultValue={g.naviera ?? ""} />
         </div>
@@ -87,9 +96,9 @@ export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; ad
           <Label>Proveedor</Label>
           <Input name="proveedor" defaultValue={g.proveedor ?? ""} />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label>Número de factura</Label>
-          <Input name="numero_factura" defaultValue={g.numero_factura ?? ""} />
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <Label>Número(s) de factura</Label>
+          <FacturasInput defaultValue={g.numero_factura ?? ""} />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>Contenedor(es)</Label>
@@ -102,6 +111,10 @@ export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; ad
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <Label>Descripción de la carga</Label>
           <Textarea name="descripcion_carga" rows={2} defaultValue={g.descripcion_carga ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <Label>Origen(es) de la carga — uno por línea</Label>
+          <Textarea name="origen_carga" rows={2} defaultValue={g.origen_carga ?? ""} placeholder="Uno por línea si son varios" />
         </div>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}

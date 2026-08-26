@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useModalClose } from "@/components/ui/modal"
 import { toast } from "sonner"
 import { editarDatosGestion } from "@/lib/actions/gestiones"
+import { FacturasInput } from "@/components/facturas-input"
 import { INMUTABLES, type CampoPaso } from "@/lib/pasos"
 import type { Aduana, Gestion } from "@/lib/types"
 
@@ -52,7 +53,7 @@ export function PasoForm({
   const [gateVals, setGateVals] = useState<Record<string, string>>(() => {
     const o: Record<string, string> = {}
     for (const name of gateNames) {
-      const v = (gestion as Record<string, unknown>)[name]
+      const v = (gestion as unknown as Record<string, unknown>)[name]
       o[name] = v === true ? "si" : v === false ? "no" : ""
     }
     return o
@@ -66,7 +67,7 @@ export function PasoForm({
     if (!c.condicion) return true
     const { campo, igual } = c.condicion
     if (gateNames.has(campo)) return strToBool(gateVals[campo] ?? "") === igual
-    return (gestion as Record<string, unknown>)[campo] === igual
+    return (gestion as unknown as Record<string, unknown>)[campo] === igual
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -87,7 +88,7 @@ export function PasoForm({
     })
   }
 
-  const val = (name: string) => (gestion as Record<string, unknown>)[name]
+  const val = (name: string) => (gestion as unknown as Record<string, unknown>)[name]
   const triVal = (name: string) => {
     const v = val(name)
     return v === true ? "si" : v === false ? "no" : ""
@@ -107,7 +108,7 @@ export function PasoForm({
           // Inmutable: BL / declaración / ENP no se editan una vez registrados.
           const inmutable = INMUTABLES.has(c.name) && val(c.name) != null && val(c.name) !== ""
           return (
-          <div key={c.name} className={`flex flex-col gap-1.5 ${c.tipo === "textarea" ? "sm:col-span-2" : ""}`}>
+          <div key={c.name} className={`flex flex-col gap-1.5 ${c.tipo === "textarea" || c.tipo === "facturas" ? "sm:col-span-2" : ""}`}>
             <Label className="text-xs">{c.label}</Label>
             {c.tipo === "text" && (
               <Input
@@ -122,6 +123,7 @@ export function PasoForm({
             {c.tipo === "date" && <Input name={c.name} type="date" defaultValue={iso(val(c.name))} />}
             {c.tipo === "datetime" && <Input name={c.name} type="datetime-local" defaultValue={isoLocal(val(c.name))} />}
             {c.tipo === "textarea" && <Textarea name={c.name} rows={2} defaultValue={(val(c.name) as string) ?? ""} />}
+            {c.tipo === "facturas" && <FacturasInput name={c.name} defaultValue={(val(c.name) as string) ?? ""} />}
             {c.tipo === "tristate" && (
               <Select
                 name={c.name}

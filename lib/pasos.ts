@@ -1,7 +1,7 @@
 // Configuración de los campos que se capturan en cada paso del proceso.
 // La clave es el nombre de la etapa (estados_catalogo.nombre).
 
-export type TipoCampo = "text" | "textarea" | "num" | "date" | "datetime" | "tristate" | "select" | "aduana"
+export type TipoCampo = "text" | "textarea" | "facturas" | "num" | "date" | "datetime" | "tristate" | "select" | "aduana"
 
 export interface CampoPaso {
   name: string
@@ -48,7 +48,7 @@ export const PASOS: Paso[] = [
       { name: "eta", label: "ETA", tipo: "date" },
       { name: "aduana_id", label: "Aduana de ingreso", tipo: "aduana" },
       { name: "proveedor", label: "Proveedor", tipo: "text" },
-      { name: "numero_factura", label: "Número(s) de factura — uno por línea", tipo: "textarea" },
+      { name: "numero_factura", label: "Número(s) de factura", tipo: "facturas" },
       { name: "numero_orden_compra", label: "Número de orden de compra", tipo: "text" },
       { name: "numero_pedido", label: "Número de pedido", tipo: "text" },
       { name: "contenedores", label: "Contenedor(es)", tipo: "text" },

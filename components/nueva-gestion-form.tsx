@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Modal, useModalClose } from "@/components/ui/modal"
 import { toast } from "sonner"
 import { crearGestion } from "@/lib/actions/gestiones"
+import { FacturasInput } from "@/components/facturas-input"
 import { firmarSubidaAdjunto, registrarAdjunto } from "@/lib/actions/adjuntos"
 import { getSupabaseBrowser } from "@/lib/supabase/client"
 import { crearClienteRapido } from "@/lib/actions/clientes"
@@ -212,9 +213,9 @@ export function NuevaGestionForm({
                 <Label>Proveedor</Label>
                 <Input name="proveedor" />
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
                 <Label>Número(s) de factura</Label>
-                <Textarea name="numero_factura" rows={2} placeholder="Uno por línea si son varias" />
+                <FacturasInput />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label>Contenedor(es)</Label>
