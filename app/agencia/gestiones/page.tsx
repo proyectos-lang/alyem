@@ -3,12 +3,12 @@ import { Plus, Download, UserRound, Building2 } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Buscador } from "@/components/buscador"
 import { GestionesTabla } from "@/components/gestiones-tabla"
 import { FiltrosOperaciones } from "@/components/filtros-operaciones"
 import { TipoOperacionTabs } from "@/components/tipo-operacion-tabs"
 import { AgruparOperaciones } from "@/components/agrupar-operaciones"
+import { SeccionColapsable } from "@/components/seccion-colapsable"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones, getEstadosCatalogo } from "@/lib/data/gestiones"
@@ -86,38 +86,42 @@ export default async function GestionesAgencia({
           <FiltrosOperaciones estados={estados} aduanas={aduanas} clientesAduaneros={clientesAduaneros} />
           <AgruparOperaciones />
           {group === "operador_cliente" ? (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
               {seccionesPorOperadorCliente(gestiones).map((op) => (
-                <div key={op.id} className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2 border-b border-border pb-1">
-                    <UserRound className="size-4 text-muted-foreground" />
-                    <h3 className="text-sm font-semibold">{op.operador}</h3>
-                    <Badge variant="muted">{op.total}</Badge>
+                <SeccionColapsable
+                  key={op.id}
+                  icon={<UserRound className="size-4 text-muted-foreground" />}
+                  titulo={op.operador}
+                  count={op.total}
+                  resumen={`${op.clientes.length} cliente${op.clientes.length === 1 ? "" : "s"}`}
+                >
+                  <div className="flex flex-col gap-2 md:pl-4">
+                    {op.clientes.map((cli) => (
+                      <SeccionColapsable
+                        key={cli.id}
+                        icon={<Building2 className="size-3.5 text-muted-foreground" />}
+                        titulo={cli.label}
+                        count={cli.items.length}
+                        defaultOpen={false}
+                      >
+                        <GestionesTabla gestiones={cli.items} marcas={marcas} />
+                      </SeccionColapsable>
+                    ))}
                   </div>
-                  {op.clientes.map((cli) => (
-                    <div key={cli.id} className="flex flex-col gap-2 md:pl-3">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="size-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">{cli.label}</span>
-                        <Badge variant="muted">{cli.items.length}</Badge>
-                      </div>
-                      <GestionesTabla gestiones={cli.items} marcas={marcas} />
-                    </div>
-                  ))}
-                </div>
+                </SeccionColapsable>
               ))}
             </div>
           ) : group === "operador" || group === "cliente" ? (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
               {(group === "operador" ? seccionesPorOperador(gestiones) : seccionesPorCliente(gestiones)).map((s) => (
-                <div key={s.id} className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2 border-b border-border pb-1">
-                    {group === "operador" ? <UserRound className="size-4 text-muted-foreground" /> : <Building2 className="size-4 text-muted-foreground" />}
-                    <h3 className="text-sm font-semibold">{s.label}</h3>
-                    <Badge variant="muted">{s.items.length}</Badge>
-                  </div>
+                <SeccionColapsable
+                  key={s.id}
+                  icon={group === "operador" ? <UserRound className="size-4 text-muted-foreground" /> : <Building2 className="size-4 text-muted-foreground" />}
+                  titulo={s.label}
+                  count={s.items.length}
+                >
                   <GestionesTabla gestiones={s.items} mostrarEmpresa={group === "operador"} marcas={marcas} />
-                </div>
+                </SeccionColapsable>
               ))}
             </div>
           ) : (
