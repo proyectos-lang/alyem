@@ -9,6 +9,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { fecha, haceCuanto } from "@/lib/format"
 import type { GestionConEstado } from "@/lib/data/gestiones"
 
+// Etiqueta + color por tipo de operación (para distinguir importación/exportación).
+const TIPO_OP: Record<string, { label: string; clase: string }> = {
+  importacion: { label: "Importación", clase: "border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300" },
+  exportacion: { label: "Exportación", clase: "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300" },
+  transito: { label: "Tránsito", clase: "border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-300" },
+  duca_f: { label: "DUCA F", clase: "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300" },
+  transito_rapido: { label: "Tránsito Rápido", clase: "border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300" },
+}
+function TipoBadge({ tipo }: { tipo: string }) {
+  const t = TIPO_OP[tipo] ?? { label: tipo, clase: "border-border bg-muted text-muted-foreground" }
+  return <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${t.clase}`}>{t.label}</span>
+}
+
 // Insignia de marca diferencial: identifica a Alyem que la operación pertenece a
 // un cliente aduanero (sub-agencia). Solo se muestra en las vistas de Alyem.
 function MarcaCA({ nombre }: { nombre: string }) {
@@ -52,9 +65,10 @@ export function GestionesTabla({
                 <div className="min-w-0">
                   <p className="truncate font-medium">{g.referencia}</p>
                   {mostrarEmpresa && <p className="truncate text-xs text-muted-foreground">{g.empresa?.nombre ?? "—"}</p>}
-                  {mostrarEmpresa && marcaDe(g.empresa_id) && (
-                    <span className="mt-1 inline-flex"><MarcaCA nombre={marcaDe(g.empresa_id)!.caNombre} /></span>
-                  )}
+                  <span className="mt-1 flex flex-wrap items-center gap-1">
+                    <TipoBadge tipo={g.tipo_operacion} />
+                    {mostrarEmpresa && marcaDe(g.empresa_id) && <MarcaCA nombre={marcaDe(g.empresa_id)!.caNombre} />}
+                  </span>
                 </div>
                 <EstadoChip nombre={g.estado?.nombre ?? "Sin estado"} color={g.estado?.color} />
               </div>
@@ -75,6 +89,7 @@ export function GestionesTabla({
         <TableHeader>
           <TableRow>
             <TableHead className="sticky left-0 z-10 bg-muted/30"><SortHeader col="referencia">Referencia</SortHeader></TableHead>
+            <TableHead><SortHeader col="tipo">Tipo</SortHeader></TableHead>
             {mostrarEmpresa && <TableHead><SortHeader col="empresa">Empresa</SortHeader></TableHead>}
             <TableHead><SortHeader col="aduana">Aduana</SortHeader></TableHead>
             <TableHead><SortHeader col="naviera">Naviera</SortHeader></TableHead>
@@ -95,6 +110,7 @@ export function GestionesTabla({
                   )}
                 </Link>
               </TableCell>
+              <TableCell><TipoBadge tipo={g.tipo_operacion} /></TableCell>
               {mostrarEmpresa && (
                 <TableCell className="text-muted-foreground">
                   <div className="flex flex-col items-start gap-1">
@@ -122,7 +138,7 @@ export function GestionesTabla({
           ))}
           {gestiones.length === 0 && (
             <TableRow>
-              <TableCell colSpan={mostrarEmpresa ? 8 : 7} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={mostrarEmpresa ? 9 : 8} className="py-10 text-center text-muted-foreground">
                 No hay operaciones que coincidan.
               </TableCell>
             </TableRow>

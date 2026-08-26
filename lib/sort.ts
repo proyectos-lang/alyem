@@ -11,6 +11,7 @@ function cmp(a: unknown, b: unknown): number {
 
 const CLAVES: Record<string, (g: GestionConEstado) => unknown> = {
   referencia: (g) => g.referencia,
+  tipo: (g) => g.tipo_operacion,
   empresa: (g) => g.empresa?.nombre,
   aduana: (g) => g.aduana?.nombre,
   naviera: (g) => g.naviera,

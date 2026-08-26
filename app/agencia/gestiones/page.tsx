@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Buscador } from "@/components/buscador"
 import { GestionesTabla } from "@/components/gestiones-tabla"
 import { FiltrosOperaciones } from "@/components/filtros-operaciones"
+import { TipoOperacionTabs } from "@/components/tipo-operacion-tabs"
 import { SetupNotice } from "@/components/setup-notice"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones, getEstadosCatalogo } from "@/lib/data/gestiones"
@@ -77,6 +78,7 @@ export default async function GestionesAgencia({
         />
         <div className="mt-6 flex flex-col gap-4">
           <Buscador />
+          <TipoOperacionTabs />
           <FiltrosOperaciones estados={estados} aduanas={aduanas} clientesAduaneros={clientesAduaneros} />
           <GestionesTabla gestiones={gestiones} mostrarEmpresa marcas={marcas} />
         </div>
