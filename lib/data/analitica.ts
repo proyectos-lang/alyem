@@ -19,6 +19,7 @@ export interface AnaliticaGerencial {
   porRegimen: { nombre: string; valor: number }[]
   porAduana: { nombre: string; valor: number }[]
   porCliente: { nombre: string; valor: number }[]
+  porOperador: { nombre: string; valor: number }[]
   porCanal: { nombre: string; valor: number; color: string }[]
   radar: PromedioDimension[]
   rango: { desde: string | null; hasta: string | null }
@@ -75,17 +76,19 @@ export async function analiticaGerencial(
   const hasta = opts.hasta || null
   const hayRango = !!(desde || hasta)
 
-  const [{ data: gs }, { data: cierres }, { data: emps }, { data: adus }, { data: regs }, califs] = await Promise.all([
-    sb.from("gestiones").select("id, fecha_solicitud, tipo_operacion, regimen_id, aduana_id, empresa_id, valor_fob, valor_flete, valor_seguro, otros_gastos, kilos, canal_selectivo"),
+  const [{ data: gs }, { data: cierres }, { data: emps }, { data: adus }, { data: regs }, { data: usrs }, califs] = await Promise.all([
+    sb.from("gestiones").select("id, fecha_solicitud, tipo_operacion, regimen_id, aduana_id, empresa_id, operador_id, valor_fob, valor_flete, valor_seguro, otros_gastos, kilos, canal_selectivo"),
     sb.from("eventos").select("gestion_id, fecha_evento, estado:estados_catalogo!inner(tipo)").eq("estado.tipo", "final"),
     sb.from("empresas").select("id, nombre"),
     sb.from("aduanas").select("id, nombre"),
     sb.from("regimenes").select("id, nombre"),
+    sb.from("usuarios").select("id, nombre"),
     listarCalificaciones().catch(() => [] as any[]),
   ])
   const empNombre = new Map((emps as any[] ?? []).map((e) => [e.id, e.nombre]))
   const aduNombre = new Map((adus as any[] ?? []).map((a) => [a.id, a.nombre]))
   const regNombre = new Map((regs as any[] ?? []).map((r) => [r.id, r.nombre]))
+  const usrNombre = new Map((usrs as any[] ?? []).map((u) => [u.id, u.nombre]))
 
   // Filtro por rango (inclusive). Operaciones por fecha_solicitud; cierres por fecha_evento.
   const enRango = (f: unknown) => {
@@ -188,14 +191,23 @@ export async function analiticaGerencial(
   const regMap = new Map<string, number>()
   const aduMap = new Map<string, number>()
   const cliMap = new Map<string, number>()
+  const opMap = new Map<string, number>()
   const canalMap = new Map<string, number>()
+  let sinOperador = 0
   for (const g of gestiones) {
     inc(tipoMap, g.tipo_operacion)
     if (g.regimen_id) inc(regMap, g.regimen_id)
     if (g.aduana_id) inc(aduMap, g.aduana_id)
     if (g.empresa_id) inc(cliMap, g.empresa_id)
+    if (g.operador_id) inc(opMap, g.operador_id)
+    else sinOperador++
     if (g.canal_selectivo) inc(canalMap, g.canal_selectivo)
   }
+  // Órdenes generadas por operador (todos, ordenados desc; sin asignar al final).
+  const porOperador = [...opMap.entries()]
+    .map(([k, valor]) => ({ nombre: usrNombre.get(k) ?? "—", valor }))
+    .sort((a, b) => b.valor - a.valor)
+  if (sinOperador > 0) porOperador.push({ nombre: "Sin asignar", valor: sinOperador })
 
   return {
     totales: {
@@ -214,6 +226,7 @@ export async function analiticaGerencial(
     porRegimen: topN(regMap, (k) => regNombre.get(k) ?? "—"),
     porAduana: topN(aduMap, (k) => aduNombre.get(k) ?? "—"),
     porCliente: topN(cliMap, (k) => empNombre.get(k) ?? "—"),
+    porOperador,
     porCanal: [...canalMap.entries()].map(([k, valor]) => ({ nombre: CANAL[k]?.nombre ?? k, valor, color: CANAL[k]?.color ?? "#94a3b8" })),
     radar: promediosDimensiones(califs),
     rango: { desde, hasta },

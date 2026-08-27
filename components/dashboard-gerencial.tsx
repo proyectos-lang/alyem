@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from "recharts"
-import { TrendingUp, PieChart as PieIcon, Landmark, Ship, CalendarRange, CalendarDays, DollarSign, Layers, Users, type LucideIcon } from "lucide-react"
+import { TrendingUp, PieChart as PieIcon, Landmark, Ship, CalendarRange, CalendarDays, DollarSign, Layers, Users, UserRound, type LucideIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Reveal } from "@/components/ui/reveal"
 import { RadarSatisfaccion } from "@/components/radar-satisfaccion"
@@ -74,6 +74,16 @@ export function DashboardGerencial({ data }: { data: AnaliticaGerencial }) {
               <Line type="monotone" dataKey="creadas" name="Creadas" stroke={NARANJA} strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="cerradas" name="Cerradas" stroke={GRAFITO} strokeWidth={2} dot={false} />
             </LineChart>
+          </ChartCard>
+
+          <ChartCard titulo="Órdenes generadas por operador" icon={UserRound} delay={0.05} alto={Math.max(220, data.porOperador.length * 34)}>
+            <BarChart data={data.porOperador} layout="vertical" margin={{ left: 20 }}>
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" tick={ejeTick} allowDecimals={false} />
+              <YAxis type="category" dataKey="nombre" tick={ejeTick} width={140} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="valor" name="Órdenes" fill="#6366f1" radius={[0, 4, 4, 0]} />
+            </BarChart>
           </ChartCard>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
