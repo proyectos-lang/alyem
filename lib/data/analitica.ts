@@ -12,6 +12,7 @@ const CANAL: Record<string, { nombre: string; color: string }> = {
 
 export interface AnaliticaGerencial {
   totales: { total: number; activas: number; cerradas: number; canceladas: number; cifTotal: number; kilosTotal: number; clientes: number }
+  serieDiaria: { dia: string; label: string; creadas: number; cerradas: number }[]
   serieMensual: { mes: string; label: string; creadas: number; cerradas: number; cif: number }[]
   serieAnual: { ano: string; creadas: number; cerradas: number; cif: number }[]
   porTipo: { nombre: string; valor: number }[]
@@ -20,6 +21,7 @@ export interface AnaliticaGerencial {
   porCliente: { nombre: string; valor: number }[]
   porCanal: { nombre: string; valor: number; color: string }[]
   radar: PromedioDimension[]
+  rango: { desde: string | null; hasta: string | null }
 }
 
 const cif = (g: any) => (g.valor_fob ?? 0) + (g.valor_flete ?? 0) + (g.valor_seguro ?? 0) + (g.otros_gastos ?? 0)
@@ -32,9 +34,47 @@ function topN(map: Map<string, number>, resolver: (k: string) => string, n = 8) 
     .sort((a, b) => b.valor - a.valor)
     .slice(0, n)
 }
+// Helpers de fechas (comparación por string ISO 'YYYY-MM-DD', que ordena cronológicamente).
+const dia = (f: unknown) => String(f).slice(0, 10)
+function restarDias(fecha: string, n: number): string {
+  const d = new Date(`${fecha}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+function diasEntre(desde: string, hasta: string): string[] {
+  const out: string[] = []
+  const d = new Date(`${desde}T00:00:00Z`)
+  const end = new Date(`${hasta}T00:00:00Z`)
+  let guard = 0
+  while (d <= end && guard++ < 400) {
+    out.push(d.toISOString().slice(0, 10))
+    d.setUTCDate(d.getUTCDate() + 1)
+  }
+  return out
+}
+function mesesEntre(m0: string, m1: string): string[] {
+  const out: string[] = []
+  let [y, m] = m0.split("-").map(Number)
+  const [ey, em] = m1.split("-").map(Number)
+  let guard = 0
+  while ((y < ey || (y === ey && m <= em)) && guard++ < 120) {
+    out.push(`${y}-${String(m).padStart(2, "0")}`)
+    m++
+    if (m > 12) { m = 1; y++ }
+  }
+  return out
+}
+const etiquetaMes = (mes: string) => `${MES_CORTO[Number(mes.slice(5, 7)) - 1]} ${mes.slice(2, 4)}`
+const etiquetaDia = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`
 
-export async function analiticaGerencial(): Promise<AnaliticaGerencial> {
+export async function analiticaGerencial(
+  opts: { desde?: string; hasta?: string } = {},
+): Promise<AnaliticaGerencial> {
   const sb = getSupabase()
+  const desde = opts.desde || null
+  const hasta = opts.hasta || null
+  const hayRango = !!(desde || hasta)
+
   const [{ data: gs }, { data: cierres }, { data: emps }, { data: adus }, { data: regs }, califs] = await Promise.all([
     sb.from("gestiones").select("id, fecha_solicitud, tipo_operacion, regimen_id, aduana_id, empresa_id, valor_fob, valor_flete, valor_seguro, otros_gastos, kilos, canal_selectivo"),
     sb.from("eventos").select("gestion_id, fecha_evento, estado:estados_catalogo!inner(tipo)").eq("estado.tipo", "final"),
@@ -43,12 +83,19 @@ export async function analiticaGerencial(): Promise<AnaliticaGerencial> {
     sb.from("regimenes").select("id, nombre"),
     listarCalificaciones().catch(() => [] as any[]),
   ])
-  const gestiones = (gs as any[]) ?? []
   const empNombre = new Map((emps as any[] ?? []).map((e) => [e.id, e.nombre]))
   const aduNombre = new Map((adus as any[] ?? []).map((a) => [a.id, a.nombre]))
   const regNombre = new Map((regs as any[] ?? []).map((r) => [r.id, r.nombre]))
 
-  // Clasificación activa/cerrada/cancelada.
+  // Filtro por rango (inclusive). Operaciones por fecha_solicitud; cierres por fecha_evento.
+  const enRango = (f: unknown) => {
+    const d = dia(f)
+    return (!desde || d >= desde) && (!hasta || d <= hasta)
+  }
+  const gestiones = (hayRango ? ((gs as any[]) ?? []).filter((g) => enRango(g.fecha_solicitud)) : ((gs as any[]) ?? []))
+  const cierresR = (hayRango ? ((cierres as any[]) ?? []).filter((e) => enRango(e.fecha_evento)) : ((cierres as any[]) ?? []))
+
+  // Clasificación activa/cerrada/cancelada (estado actual de las del rango).
   const estados = await estadosActuales(gestiones.map((g) => g.id))
   let activas = 0, cerradas = 0, canceladas = 0
   for (const g of gestiones) {
@@ -58,7 +105,9 @@ export async function analiticaGerencial(): Promise<AnaliticaGerencial> {
     else activas++
   }
 
-  // Serie mensual (últimos 24 meses) y anual.
+  // Mapas por día/mes/año (sobre el conjunto ya filtrado por rango).
+  const diaCreadas = new Map<string, number>()
+  const diaCerradas = new Map<string, number>()
   const mesCreadas = new Map<string, number>()
   const mesCerradas = new Map<string, number>()
   const mesCif = new Map<string, number>()
@@ -68,35 +117,62 @@ export async function analiticaGerencial(): Promise<AnaliticaGerencial> {
   let cifTotal = 0, kilosTotal = 0
 
   for (const g of gestiones) {
-    const mes = String(g.fecha_solicitud).slice(0, 7)
-    const ano = String(g.fecha_solicitud).slice(0, 4)
+    const d = dia(g.fecha_solicitud)
     const c = cif(g)
-    inc(mesCreadas, mes)
-    inc(anoCreadas, ano)
-    inc(mesCif, mes, c)
-    inc(anoCif, ano, c)
+    inc(diaCreadas, d)
+    inc(mesCreadas, d.slice(0, 7))
+    inc(anoCreadas, d.slice(0, 4))
+    inc(mesCif, d.slice(0, 7), c)
+    inc(anoCif, d.slice(0, 4), c)
     cifTotal += c
     kilosTotal += g.kilos ?? 0
   }
-  for (const e of (cierres as any[]) ?? []) {
-    const mes = String(e.fecha_evento).slice(0, 7)
-    inc(mesCerradas, mes)
-    inc(anoCerradas, String(e.fecha_evento).slice(0, 4))
+  for (const e of cierresR) {
+    const d = dia(e.fecha_evento)
+    inc(diaCerradas, d)
+    inc(mesCerradas, d.slice(0, 7))
+    inc(anoCerradas, d.slice(0, 4))
   }
 
-  // Ventana de últimos 24 meses (aunque no tengan datos).
-  const hoy = new Date()
-  const serieMensual: AnaliticaGerencial["serieMensual"] = []
-  for (let i = 23; i >= 0; i--) {
-    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1)
-    const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-    serieMensual.push({
+  // Serie diaria: rango elegido, o últimos 30 días por defecto. Acotada a <= 366 días.
+  const hoyStr = new Date().toISOString().slice(0, 10)
+  const dwEnd = hasta || hoyStr
+  let dwStart = desde || restarDias(dwEnd, 29)
+  const limiteStart = restarDias(dwEnd, 365)
+  if (dwStart < limiteStart) dwStart = limiteStart
+  const serieDiaria = diasEntre(dwStart, dwEnd).map((d) => ({
+    dia: d,
+    label: etiquetaDia(d),
+    creadas: diaCreadas.get(d) ?? 0,
+    cerradas: diaCerradas.get(d) ?? 0,
+  }))
+
+  // Serie mensual: meses del rango, o últimos 24 meses por defecto.
+  let serieMensual: AnaliticaGerencial["serieMensual"]
+  if (hayRango) {
+    const m0 = (desde ?? (hasta as string)).slice(0, 7)
+    const m1 = (hasta ?? (desde as string)).slice(0, 7)
+    serieMensual = mesesEntre(m0, m1).map((mes) => ({
       mes,
-      label: `${MES_CORTO[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`,
+      label: etiquetaMes(mes),
       creadas: mesCreadas.get(mes) ?? 0,
       cerradas: mesCerradas.get(mes) ?? 0,
       cif: Math.round(mesCif.get(mes) ?? 0),
-    })
+    }))
+  } else {
+    const hoy = new Date()
+    serieMensual = []
+    for (let i = 23; i >= 0; i--) {
+      const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1)
+      const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      serieMensual.push({
+        mes,
+        label: `${MES_CORTO[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`,
+        creadas: mesCreadas.get(mes) ?? 0,
+        cerradas: mesCerradas.get(mes) ?? 0,
+        cif: Math.round(mesCif.get(mes) ?? 0),
+      })
+    }
   }
 
   const anos = [...new Set([...anoCreadas.keys(), ...anoCerradas.keys()])].sort()
@@ -107,7 +183,7 @@ export async function analiticaGerencial(): Promise<AnaliticaGerencial> {
     cif: Math.round(anoCif.get(ano) ?? 0),
   }))
 
-  // Distribuciones.
+  // Distribuciones (sobre el conjunto filtrado).
   const tipoMap = new Map<string, number>()
   const regMap = new Map<string, number>()
   const aduMap = new Map<string, number>()
@@ -131,6 +207,7 @@ export async function analiticaGerencial(): Promise<AnaliticaGerencial> {
       kilosTotal: Math.round(kilosTotal),
       clientes: new Set(gestiones.map((g) => g.empresa_id)).size,
     },
+    serieDiaria,
     serieMensual,
     serieAnual,
     porTipo: [...tipoMap.entries()].map(([k, valor]) => ({ nombre: TIPO_OP[k] ?? k, valor })),
@@ -139,5 +216,6 @@ export async function analiticaGerencial(): Promise<AnaliticaGerencial> {
     porCliente: topN(cliMap, (k) => empNombre.get(k) ?? "—"),
     porCanal: [...canalMap.entries()].map(([k, valor]) => ({ nombre: CANAL[k]?.nombre ?? k, valor, color: CANAL[k]?.color ?? "#94a3b8" })),
     radar: promediosDimensiones(califs),
+    rango: { desde, hasta },
   }
 }

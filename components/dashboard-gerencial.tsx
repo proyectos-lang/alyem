@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from "recharts"
-import { TrendingUp, PieChart as PieIcon, Landmark, Ship, CalendarRange, DollarSign, Layers, Users, type LucideIcon } from "lucide-react"
+import { TrendingUp, PieChart as PieIcon, Landmark, Ship, CalendarRange, CalendarDays, DollarSign, Layers, Users, type LucideIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Reveal } from "@/components/ui/reveal"
 import { RadarSatisfaccion } from "@/components/radar-satisfaccion"
@@ -64,6 +64,18 @@ export function DashboardGerencial({ data }: { data: AnaliticaGerencial }) {
 
       {tab === "operaciones" ? (
         <div className="flex flex-col gap-4">
+          <ChartCard titulo="Operaciones creadas y cerradas por día" icon={CalendarDays} delay={0} alto={300}>
+            <LineChart data={data.serieDiaria}>
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="label" tick={ejeTick} interval="preserveStartEnd" minTickGap={24} />
+              <YAxis tick={ejeTick} allowDecimals={false} width={28} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Line type="monotone" dataKey="creadas" name="Creadas" stroke={NARANJA} strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="cerradas" name="Cerradas" stroke={GRAFITO} strokeWidth={2} dot={false} />
+            </LineChart>
+          </ChartCard>
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <ChartCard titulo="Operaciones por mes (creadas vs. cerradas)" icon={TrendingUp} delay={0}>
               <LineChart data={data.serieMensual}>
