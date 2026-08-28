@@ -74,7 +74,8 @@ export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; ad
         )}
         <div className="flex flex-col gap-1.5">
           <Label>Número de BL / doc. de transporte</Label>
-          <Input name="numero_bl" defaultValue={g.carta_porte ?? ""} placeholder="Se usará como referencia" />
+          <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">{g.carta_porte || "—"}</div>
+          <span className="text-[11px] text-muted-foreground">Para corregirlo usa el botón “Cambiar BL”.</span>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>Número de orden de compra</Label>

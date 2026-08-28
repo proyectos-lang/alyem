@@ -19,6 +19,7 @@ import { DIMENSIONES } from "@/lib/satisfaccion"
 import { DiasLibresBadge } from "@/components/dias-libres-badge"
 import { AvanzarEtapa } from "@/components/avanzar-etapa"
 import { DevolverEtapa } from "@/components/devolver-etapa"
+import { CambiarBL } from "@/components/cambiar-bl"
 import { MarcarRecibido } from "@/components/marcar-recibido"
 import { CopiarTrack } from "@/components/copiar-track"
 import { Breadcrumb } from "@/components/breadcrumb"
@@ -152,6 +153,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                     puedeRegistrar={puede(usuario, PERMISOS.EVENTO_REGISTRAR)}
                   />
                 )}
+                {!esFinal && <CambiarBL gestionId={g.id} actual={g.carta_porte} />}
                 {agencia && usuario.rol === "admin" && (
                   <DevolverEtapa gestionId={g.id} deshabilitado={!puedeDevolver} />
                 )}

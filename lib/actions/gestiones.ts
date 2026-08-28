@@ -453,6 +453,56 @@ export async function editarDatosGestion(form: FormData) {
   revalidatePath(`/g/${gestionId}`)
 }
 
+// Corrección del número de BL (carta de porte) cuando la consolidadora lo cambia.
+// El BL es normalmente inmutable; esta acción dedicada permite corregirlo de forma
+// controlada (agencia con permiso de edición), ajusta la referencia si seguía al
+// BL, lo deja en la trazabilidad y avisa al cliente.
+export async function cambiarBL(gestionId: string, nuevoBL: string) {
+  const usuario = await getUsuarioActivo()
+  if (!usuario) throw new Error("Sesión no válida.")
+  const sb = getSupabase()
+
+  const bl = (nuevoBL ?? "").trim()
+  if (!bl) throw new Error("Ingresa el nuevo número de BL.")
+
+  const { data: g } = await sb.from("gestiones").select("carta_porte, referencia, empresa_id").eq("id", gestionId).maybeSingle()
+  if (!g) throw new Error("Operación no encontrada.")
+
+  // Anti-bypass: la operación debe estar en el alcance del usuario.
+  const vis = await empresasVisibles(usuario!)
+  if (vis && !vis.includes((g as { empresa_id: string }).empresa_id)) {
+    throw new Error("No tienes acceso a esta operación.")
+  }
+
+  const anterior = (g as { carta_porte: string | null }).carta_porte
+  if (anterior === bl) throw new Error("El BL ingresado es igual al actual.")
+
+  await sb.from("gestiones").update({ carta_porte: bl }).eq("id", gestionId)
+
+  // La referencia sigue al BL: si la referencia era el BL anterior (o el
+  // correlativo GES-…), se actualiza al nuevo BL, evitando duplicados.
+  const refActual = (g as { referencia?: string }).referencia ?? ""
+  const seguiaAlBL = refActual === anterior || refActual.startsWith("GES-")
+  if (seguiaAlBL && refActual !== bl && !(await existeReferencia(bl))) {
+    await sb.from("gestiones").update({ referencia: bl }).eq("id", gestionId)
+  }
+
+  await sb.from("eventos").insert({
+    gestion_id: gestionId,
+    tipo: "observacion",
+    observacion: `Número de BL corregido: ${anterior ?? "—"} → ${bl}.`,
+    usuario_id: usuario.id,
+  })
+  // Avisa a la contraparte según quién hizo el cambio.
+  const empresaId = (g as { empresa_id: string }).empresa_id
+  if (usuario.rol === "operador" || usuario.rol === "admin") {
+    await notificarEmpresa(empresaId, "bl_actualizado", `Se actualizó el número de BL de tu operación a ${bl}.`, gestionId)
+  } else {
+    await notificarAgencia("bl_actualizado", `${usuario.nombre} corrigió el BL de una operación a ${bl}.`, gestionId)
+  }
+  revalidatePath(`/g/${gestionId}`)
+}
+
 // Paso 13 — el cliente marca que recibió la carga y el servicio.
 export async function marcarRecibido(gestionId: string) {
   const usuario = await getUsuarioActivo()
