@@ -4,6 +4,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Save, Trash2, Filter } from "lucide-react"
 import { Select } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import type { EstadoCatalogo, Aduana } from "@/lib/types"
 
@@ -34,6 +35,10 @@ export function FiltrosOperaciones({
   const canal = params.get("canal") ?? ""
   const tipo = params.get("tipo") ?? ""
   const ca = params.get("ca") ?? ""
+  const etaDesde = params.get("eta_desde") ?? ""
+  const etaHasta = params.get("eta_hasta") ?? ""
+  const creadaDesde = params.get("creada_desde") ?? ""
+  const creadaHasta = params.get("creada_hasta") ?? ""
 
   const [guardados, setGuardados] = useState<FiltroGuardado[]>([])
   const [sel, setSel] = useState("")
@@ -70,6 +75,10 @@ export function FiltrosOperaciones({
     p.delete("canal")
     p.delete("tipo")
     p.delete("ca")
+    p.delete("eta_desde")
+    p.delete("eta_hasta")
+    p.delete("creada_desde")
+    p.delete("creada_hasta")
     router.replace(`${pathname}?${p.toString()}`)
     setSel("")
   }
@@ -99,7 +108,7 @@ export function FiltrosOperaciones({
     setSel("")
   }
 
-  const hayFiltro = !!(estado || aduana || canal || tipo || ca)
+  const hayFiltro = !!(estado || aduana || canal || tipo || ca || etaDesde || etaHasta || creadaDesde || creadaHasta)
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2.5">
@@ -133,6 +142,18 @@ export function FiltrosOperaciones({
           ))}
         </Select>
       )}
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-medium text-muted-foreground">ETA</span>
+        <Input type="date" value={etaDesde} onChange={(e) => set("eta_desde", e.target.value)} className="h-8 w-[8.5rem] text-xs" title="ETA desde" />
+        <span className="text-xs text-muted-foreground">–</span>
+        <Input type="date" value={etaHasta} onChange={(e) => set("eta_hasta", e.target.value)} className="h-8 w-[8.5rem] text-xs" title="ETA hasta" />
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-medium text-muted-foreground">Creada</span>
+        <Input type="date" value={creadaDesde} onChange={(e) => set("creada_desde", e.target.value)} className="h-8 w-[8.5rem] text-xs" title="Creada desde" />
+        <span className="text-xs text-muted-foreground">–</span>
+        <Input type="date" value={creadaHasta} onChange={(e) => set("creada_hasta", e.target.value)} className="h-8 w-[8.5rem] text-xs" title="Creada hasta" />
+      </div>
       {hayFiltro && (
         <Button size="sm" variant="ghost" onClick={limpiar}>Limpiar</Button>
       )}

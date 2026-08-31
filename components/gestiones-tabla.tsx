@@ -6,7 +6,7 @@ import { SortHeader } from "@/components/sort-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { fecha, haceCuanto } from "@/lib/format"
+import { fechaCorta, haceCuanto } from "@/lib/format"
 import type { GestionConEstado } from "@/lib/data/gestiones"
 
 // Etiqueta + color por tipo de operación (para distinguir importación/exportación).
@@ -75,7 +75,8 @@ export function GestionesTabla({
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                 {g.aduana?.nombre && <span>{g.aduana.nombre}</span>}
                 {g.naviera && <span>· {g.naviera}</span>}
-                <span>· ETA {fecha(g.eta)}</span>
+                <span className="whitespace-nowrap">· ETA {fechaCorta(g.eta)}</span>
+                <span className="whitespace-nowrap">· Creada {fechaCorta(g.created_at)}</span>
               </div>
               <DiasLibresBadge gestion={g} />
             </Link>
@@ -83,9 +84,9 @@ export function GestionesTabla({
         )}
       </div>
 
-      {/* Vista escritorio: tabla */}
+      {/* Vista escritorio: tabla (fuente compacta; fechas cortas sin cortes) */}
       <Card className="hidden overflow-hidden md:block">
-      <Table>
+      <Table className="text-xs">
         <TableHeader>
           <TableRow>
             <TableHead className="sticky left-0 z-10 bg-muted/30"><SortHeader col="referencia">Referencia</SortHeader></TableHead>
@@ -95,6 +96,7 @@ export function GestionesTabla({
             <TableHead><SortHeader col="naviera">Naviera</SortHeader></TableHead>
             <TableHead><SortHeader col="estado">Estado</SortHeader></TableHead>
             <TableHead><SortHeader col="eta">ETA</SortHeader></TableHead>
+            <TableHead><SortHeader col="creada">Creada</SortHeader></TableHead>
             <TableHead><SortHeader col="actualizada">Actualizada</SortHeader></TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
@@ -127,8 +129,9 @@ export function GestionesTabla({
                   <DiasLibresBadge gestion={g} />
                 </div>
               </TableCell>
-              <TableCell className="text-muted-foreground">{fecha(g.eta)}</TableCell>
-              <TableCell className="text-muted-foreground">{haceCuanto(g.estado?.fecha ?? g.created_at)}</TableCell>
+              <TableCell className="whitespace-nowrap text-muted-foreground">{fechaCorta(g.eta)}</TableCell>
+              <TableCell className="whitespace-nowrap text-muted-foreground">{fechaCorta(g.created_at)}</TableCell>
+              <TableCell className="whitespace-nowrap text-muted-foreground">{haceCuanto(g.estado?.fecha ?? g.created_at)}</TableCell>
               <TableCell className="text-right">
                 <Link href={`/g/${g.id}`}>
                   <Button size="xs" variant="outline"><Eye /> Ver operación</Button>
@@ -138,7 +141,7 @@ export function GestionesTabla({
           ))}
           {gestiones.length === 0 && (
             <TableRow>
-              <TableCell colSpan={mostrarEmpresa ? 9 : 8} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={mostrarEmpresa ? 10 : 9} className="py-10 text-center text-muted-foreground">
                 No hay operaciones que coincidan.
               </TableCell>
             </TableRow>

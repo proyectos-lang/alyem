@@ -17,6 +17,7 @@ const CLAVES: Record<string, (g: GestionConEstado) => unknown> = {
   naviera: (g) => g.naviera,
   estado: (g) => g.estado?.nombre,
   eta: (g) => (g.eta ? new Date(g.eta).getTime() : 0),
+  creada: (g) => new Date(g.created_at).getTime(),
   actualizada: (g) => new Date(g.estado?.fecha ?? g.created_at).getTime(),
 }
 

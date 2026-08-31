@@ -34,6 +34,19 @@ export function fecha(valor: string | null | undefined): string {
   }).format(d)
 }
 
+// Fecha corta numérica ("dd/mm/aa") — compacta, no se corta en varias líneas.
+export function fechaCorta(valor: string | null | undefined): string {
+  if (!valor) return "—"
+  const { d, soloFecha } = aFecha(valor)
+  if (Number.isNaN(d.getTime())) return "—"
+  return new Intl.DateTimeFormat("es-HN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    timeZone: soloFecha ? "UTC" : TZ,
+  }).format(d)
+}
+
 export function fechaHora(valor: string | null | undefined): string {
   if (!valor) return "—"
   const d = new Date(valor)

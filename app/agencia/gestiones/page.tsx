@@ -24,11 +24,12 @@ export const dynamic = "force-dynamic"
 export default async function GestionesAgencia({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; dir?: string; estado?: string; aduana?: string; canal?: string; tipo?: string; ca?: string; group?: string }>
+  searchParams: Promise<{ q?: string; sort?: string; dir?: string; estado?: string; aduana?: string; canal?: string; tipo?: string; ca?: string; group?: string; eta_desde?: string; eta_hasta?: string; creada_desde?: string; creada_hasta?: string }>
 }) {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver las gestiones." />
-  const { q, sort, dir, estado, aduana, canal, tipo, ca, group: groupRaw } = await searchParams
+  const sp = await searchParams
+  const { q, sort, dir, estado, aduana, canal, tipo, ca, group: groupRaw } = sp
   const group = ["operador", "cliente", "operador_cliente"].includes(groupRaw ?? "") ? groupRaw : ""
 
   const [todas, estados, aduanas] = await Promise.all([
@@ -36,7 +37,11 @@ export default async function GestionesAgencia({
     getEstadosCatalogo(),
     listarAduanas(true),
   ])
-  let filtradas = filtrarGestiones(todas, { estado, aduana, canal, tipo })
+  let filtradas = filtrarGestiones(todas, {
+    estado, aduana, canal, tipo,
+    etaDesde: sp.eta_desde, etaHasta: sp.eta_hasta,
+    creadaDesde: sp.creada_desde, creadaHasta: sp.creada_hasta,
+  })
 
   // Marca diferencial de cliente aduanero: solo la ve Alyem (operador/admin).
   const marcas = esAgencia(usuario.rol)
