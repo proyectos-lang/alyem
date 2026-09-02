@@ -8,6 +8,7 @@ const FORMA_PAGO: Record<string, string> = {
   tarjeta_credito: "Tarjeta de crédito",
   otros: "Otros",
 }
+const GATEPASS: Record<string, string> = { si: "Sí", no: "No", na: "N/A" }
 
 function num(v: number | null) {
   return v == null ? "—" : v.toLocaleString("es-HN")
@@ -63,7 +64,7 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
         <Dato label="Boletín enviado / pagado" valor={`${tri(g.boletin_enviado)} / ${tri(g.boletin_pagado)}`} />
         <Dato label="Canal selectivo" valor={g.canal_selectivo} />
         <Dato label="Despacho" valor={fechaHora(g.fecha_hora_despacho)} />
-        <Dato label="Gatepass entregado" valor={tri(g.gatepass_entregado)} />
+        <Dato label="Gatepass entregado" valor={GATEPASS[g.gatepass_entregado ?? ""] ?? null} />
         <Dato label="Factura del servicio" valor={g.estado_factura === "enviada" ? "Enviada" : g.estado_factura === "en_proceso" ? "En proceso" : null} />
         <Dato label="Recibido por el cliente" valor={g.recibido ? "Sí" : "No"} />
       </dl>

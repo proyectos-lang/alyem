@@ -140,7 +140,7 @@ export interface Gestion {
   // Paso 11 — Gatepass
   gatepass_aplica: boolean | null
   transporte_naviera: boolean | null
-  gatepass_entregado: boolean | null
+  gatepass_entregado: string | null // 'si' | 'no' | 'na'
   gatepass_observacion: string | null
 
   // Paso 12 — Facturación

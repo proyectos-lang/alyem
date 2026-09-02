@@ -168,7 +168,11 @@ export const PASOS: Paso[] = [
     campos: [
       { name: "gatepass_aplica", label: "¿Aplica?", tipo: "tristate" },
       { name: "transporte_naviera", label: "Transporte de la naviera", tipo: "tristate" },
-      { name: "gatepass_entregado", label: "Gatepass entregado", tipo: "tristate" },
+      { name: "gatepass_entregado", label: "Gatepass entregado", tipo: "select", opciones: [
+        { value: "si", label: "Sí" },
+        { value: "no", label: "No" },
+        { value: "na", label: "N/A" },
+      ] },
       { name: "gatepass_fecha_hora", label: "Fecha y hora del gate pass", tipo: "datetime" },
       { name: "gatepass_observacion", label: "Observaciones", tipo: "textarea" },
     ],

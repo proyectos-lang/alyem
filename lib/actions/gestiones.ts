@@ -327,14 +327,14 @@ const DATE = [
   "fecha_revision_opc", "fecha_posicionamiento_equipos", "fecha_levante",
 ]
 const DATETIME = ["fecha_hora_despacho", "gatepass_fecha_hora"]
-const ENUM = ["tipo_operacion", "forma_pago", "estado_factura", "canal_selectivo", "aduana_id", "regimen_id"]
+const ENUM = ["tipo_operacion", "forma_pago", "estado_factura", "canal_selectivo", "aduana_id", "regimen_id", "gatepass_entregado"]
 const TRISTATE = [
   "aforo", "digital", "previa", "duca_t", "naviera_aplica", "manifiesto_presentado", "liberacion",
   "doc_transporte_original", "boletin_enviado", "boletin_pagado", "gatepass_aplica",
-  "transporte_naviera", "gatepass_entregado",
+  "transporte_naviera",
 ]
 // Columnas que pueden no estar migradas aún; si el update falla, se reintenta sin ellas.
-const POSIBLES_SIN_MIGRAR = ["duca_t", "numero_orden_compra", "numero_pedido"]
+const POSIBLES_SIN_MIGRAR = ["duca_t", "numero_orden_compra", "numero_pedido", "gatepass_entregado"]
 
 export async function editarDatosGestion(form: FormData) {
   const usuario = await getUsuarioActivo()
