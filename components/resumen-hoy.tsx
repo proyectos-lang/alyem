@@ -19,6 +19,8 @@ export function ResumenHoy({ hoy, recientes }: { hoy: ResumenDia; recientes: Res
     { l: "En riesgo", v: hoy.enRiesgo, tono: hoy.enRiesgo ? "warning" : "" },
     { l: "Canal rojo", v: hoy.canalRojo, tono: hoy.canalRojo ? "danger" : "" },
     { l: "Docs pendientes", v: hoy.docsPendientes, tono: hoy.docsPendientes ? "warning" : "" },
+    { l: "UTOH vencidos", v: hoy.utohVencidos ?? 0, tono: (hoy.utohVencidos ?? 0) ? "danger" : "" },
+    { l: "UTOH por vencer", v: hoy.utohPorVencer ?? 0, tono: (hoy.utohPorVencer ?? 0) ? "warning" : "" },
   ]
   const tono = (t?: string) => (t === "danger" ? "text-destructive" : t === "warning" ? "text-amber-600" : "text-foreground")
 

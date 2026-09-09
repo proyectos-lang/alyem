@@ -2,6 +2,7 @@ import { getSupabase } from "../supabase/server"
 import { listarGestiones, getEstadosCatalogo } from "./gestiones"
 import { diasEnEtapa, alertasDe, tiemposEntreProcesos } from "./metricas"
 import { predecirRetrasos } from "./prediccion"
+import { estadoUtoh } from "../utoh"
 import { getConfig } from "../config"
 
 const ADMIN_VIRTUAL = { id: "", rol: "admin" as const, empresa_id: null }
@@ -55,11 +56,13 @@ export interface ResumenDia {
   canalRojo: number
   docsPendientes: number
   enRiesgo: number
+  utohVencidos: number
+  utohPorVencer: number
 }
 
 export async function resumenDelDia(): Promise<ResumenDia> {
   const sb = getSupabase()
-  const [gestiones, estados, diasFriaStr, slaStr, tiempos, { data: cierres }, { count: docsPend }] = await Promise.all([
+  const [gestiones, estados, diasFriaStr, slaStr, tiempos, { data: cierres }, { count: docsPend }, { data: empsUtoh }] = await Promise.all([
     listarGestiones(ADMIN_VIRTUAL),
     getEstadosCatalogo(),
     getConfig("dias_gestion_fria"),
@@ -67,10 +70,19 @@ export async function resumenDelDia(): Promise<ResumenDia> {
     tiemposEntreProcesos(),
     sb.from("eventos").select("fecha_evento, estado:estados_catalogo!inner(tipo)").eq("estado.tipo", "final"),
     sb.from("documentos_requeridos").select("id", { count: "exact", head: true }).eq("cumplido", false),
+    sb.from("empresas").select("utoh_vencimiento").eq("activo", true),
   ])
   const diasFria = Number(diasFriaStr ?? "4")
   const sla = Number(slaStr ?? "15")
   const hoy = hoyISO()
+
+  // Alarma de permisos UTOH (vencidos / por vencer). Resiliente si aún no migrado.
+  let utohVencidos = 0, utohPorVencer = 0
+  for (const e of (empsUtoh as { utoh_vencimiento: string | null }[] ?? [])) {
+    const s = estadoUtoh(e.utoh_vencimiento).estado
+    if (s === "vencido") utohVencidos++
+    else if (s === "por_vencer") utohPorVencer++
+  }
 
   const activas = gestiones.filter((g) => g.estado?.tipo !== "final" && g.estado?.tipo !== "cancelada")
   const slaPorEtapa = new Map(estados.map((e) => [e.nombre, e.sla_dias ?? null]))
@@ -94,6 +106,8 @@ export async function resumenDelDia(): Promise<ResumenDia> {
     canalRojo: activas.filter((g) => g.canal_selectivo === "rojo").length,
     docsPendientes: docsPend ?? 0,
     enRiesgo,
+    utohVencidos,
+    utohPorVencer,
   }
 }
 
@@ -110,9 +124,10 @@ export async function generarResumenDiario(): Promise<ResumenDia> {
 
   // Notifica a gerencia (admins).
   const admins = await idsAdmins()
+  const utohMsg = r.utohVencidos || r.utohPorVencer ? ` · ⚠️ UTOH: ${r.utohVencidos} vencido(s), ${r.utohPorVencer} por vencer` : ""
   const msg =
     `📊 Resumen del día: ${r.creadasHoy} creadas, ${r.cerradasHoy} cerradas · ${r.activas} activas · ` +
-    `${r.conAlertas} con alertas (${r.slaExcedidos} exceden SLA) · ${r.enRiesgo} en riesgo de retraso · ${r.docsPendientes} docs pendientes.`
+    `${r.conAlertas} con alertas (${r.slaExcedidos} exceden SLA) · ${r.enRiesgo} en riesgo de retraso · ${r.docsPendientes} docs pendientes${utohMsg}.`
   const filas = admins.map((uid) => ({ usuario_id: uid, tipo: "resumen_diario", mensaje: msg, gestion_id: null }))
   if (filas.length) await sb.from("notificaciones").insert(filas)
 

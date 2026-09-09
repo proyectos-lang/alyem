@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Pencil, Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { Pencil, Search, ChevronLeft, ChevronRight, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -9,12 +9,20 @@ import { Input } from "@/components/ui/input"
 import { Modal } from "@/components/ui/modal"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { EmpresaForm } from "@/components/admin/empresa-form"
-import { fecha } from "@/lib/format"
+import { UtohBadge } from "@/components/utoh-badge"
+import { fecha, fechaCorta } from "@/lib/format"
+import { estadoUtoh } from "@/lib/utoh"
+import { urlUTOHDoc } from "@/lib/actions/admin"
 import { cn } from "@/lib/utils"
 import type { Empresa } from "@/lib/types"
 
 const PAGE_SIZE = 10
 type EstadoFiltro = "todas" | "activas" | "inactivas"
+
+async function verUtohDoc(id: string) {
+  const url = await urlUTOHDoc(id)
+  if (url) window.open(url, "_blank")
+}
 
 export function EmpresasLista({
   empresas,
@@ -29,15 +37,31 @@ export function EmpresasLista({
 }) {
   const [q, setQ] = useState("")
   const [estado, setEstado] = useState<EstadoFiltro>("todas")
+  const [utohAlerta, setUtohAlerta] = useState(false)
   const [page, setPage] = useState(1)
+
+  // Alarma UTOH: conteo global de permisos vencidos y por vencer.
+  const utohResumen = useMemo(() => {
+    let vencidos = 0, porVencer = 0
+    for (const e of empresas) {
+      const s = estadoUtoh(e.utoh_vencimiento).estado
+      if (s === "vencido") vencidos++
+      else if (s === "por_vencer") porVencer++
+    }
+    return { vencidos, porVencer }
+  }, [empresas])
 
   const filtradas = useMemo(() => {
     const t = q.trim().toLowerCase()
     return empresas.filter((e) => {
       if (estado === "activas" && !e.activo) return false
       if (estado === "inactivas" && e.activo) return false
+      if (utohAlerta) {
+        const s = estadoUtoh(e.utoh_vencimiento).estado
+        if (s !== "vencido" && s !== "por_vencer") return false
+      }
       if (t) {
-        const heno = [e.nombre, e.id_fiscal, e.contacto, e.cuenta, e.codigo_sn, e.telefono_1]
+        const heno = [e.nombre, e.id_fiscal, e.contacto, e.cuenta, e.codigo_sn, e.telefono_1, e.utoh_numero]
           .filter(Boolean)
           .join(" ")
           .toLowerCase()
@@ -45,10 +69,10 @@ export function EmpresasLista({
       }
       return true
     })
-  }, [empresas, q, estado])
+  }, [empresas, q, estado, utohAlerta])
 
   // Al cambiar filtros, vuelve a la primera página.
-  useEffect(() => setPage(1), [q, estado])
+  useEffect(() => setPage(1), [q, estado, utohAlerta])
 
   const totalPages = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE))
   const pageSafe = Math.min(page, totalPages)
@@ -84,6 +108,26 @@ export function EmpresasLista({
         </div>
       </div>
 
+      {/* Alarma de permisos UTOH (vencidos / por vencer). Clic para filtrar. */}
+      {(utohResumen.vencidos > 0 || utohResumen.porVencer > 0) && (
+        <button
+          type="button"
+          onClick={() => setUtohAlerta((v) => !v)}
+          className={cn(
+            "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
+            utohAlerta
+              ? "border-primary bg-primary/5"
+              : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300",
+          )}
+        >
+          <ShieldAlert className="size-4 shrink-0" />
+          <span>
+            <b>Permisos UTOH:</b> {utohResumen.vencidos} vencido{utohResumen.vencidos === 1 ? "" : "s"} · {utohResumen.porVencer} por vencer (≤30 días)
+          </span>
+          <span className="ml-auto text-xs underline">{utohAlerta ? "Ver todas las empresas" : "Ver solo estas"}</span>
+        </button>
+      )}
+
       <Card className="overflow-hidden">
         <Table>
           <TableHeader>
@@ -94,6 +138,7 @@ export function EmpresasLista({
               <TableHead>Cuenta</TableHead>
               <TableHead>Código SN</TableHead>
               <TableHead>Teléfono 1</TableHead>
+              <TableHead>Permiso UTOH</TableHead>
               <TableHead>Usuarios</TableHead>
               <TableHead>Operadores</TableHead>
               <TableHead>Estado</TableHead>
@@ -112,6 +157,22 @@ export function EmpresasLista({
                   <TableCell className="text-muted-foreground">{e.cuenta ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.codigo_sn ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.telefono_1 ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {e.utoh_numero || e.utoh_vencimiento || e.utoh_doc_path ? (
+                      <div className="flex flex-col items-start gap-0.5">
+                        {e.utoh_numero && <span className="text-foreground">{e.utoh_numero}</span>}
+                        {e.utoh_vencimiento && <span className="text-[11px]">Vence {fechaCorta(e.utoh_vencimiento)}</span>}
+                        <UtohBadge vencimiento={e.utoh_vencimiento} />
+                        {e.utoh_doc_path && (
+                          <button type="button" onClick={() => verUtohDoc(e.id)} className="text-[11px] font-medium text-primary hover:underline">
+                            Ver documento
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
                   <TableCell>{conteo[e.id] ?? 0}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {nOps === 0 ? "—" : `${nOps} operador${nOps === 1 ? "" : "es"}`}
@@ -137,7 +198,7 @@ export function EmpresasLista({
             })}
             {filtradas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
                   No hay empresas que coincidan.
                 </TableCell>
               </TableRow>

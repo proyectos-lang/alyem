@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getSupabase } from "../supabase/server"
+import { getSupabase, ADJUNTOS_BUCKET, urlFirmada } from "../supabase/server"
 import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
 import type { Rol } from "../types"
@@ -13,7 +13,7 @@ async function guard(clave: (typeof PERMISOS)[keyof typeof PERMISOS]) {
 }
 
 // --- Empresas ---------------------------------------------------------------
-export async function guardarEmpresa(form: FormData) {
+export async function guardarEmpresa(form: FormData): Promise<{ id: string }> {
   await guard(PERMISOS.ADMIN_EMPRESAS)
   const sb = getSupabase()
   const id = form.get("id") as string | null
@@ -25,13 +25,15 @@ export async function guardarEmpresa(form: FormData) {
   }
   if (!filaBase.nombre) throw new Error("El nombre es obligatorio.")
 
-  // Campos adicionales (Cuenta, Código SN, Teléfono 1). Si las columnas aún no
-  // existen (pre-migración 15-empresas-campos.sql), se guarda solo la base.
+  // Campos adicionales (Cuenta, Código SN, Teléfono 1, permiso UTOH). Si alguna
+  // columna aún no existe (pre-migración), se reintenta guardando solo la base.
   const fila = {
     ...filaBase,
     cuenta: (form.get("cuenta") as string) || null,
     codigo_sn: (form.get("codigo_sn") as string) || null,
     telefono_1: (form.get("telefono_1") as string) || null,
+    utoh_numero: (form.get("utoh_numero") as string) || null,
+    utoh_vencimiento: (form.get("utoh_vencimiento") as string) || null,
   }
 
   let empresaId = id
@@ -67,6 +69,44 @@ export async function guardarEmpresa(form: FormData) {
 
   revalidatePath("/admin/empresas")
   revalidatePath("/admin/usuarios")
+  return { id: empresaId as string }
+}
+
+// --- Permiso de UTOH: documento adjunto (bucket privado, subida directa) -----
+// Firma la URL para que el navegador suba el documento directo a Storage.
+export async function firmarSubidaUTOH(empresaId: string, nombreArchivo: string) {
+  await guard(PERMISOS.ADMIN_EMPRESAS)
+  const sb = getSupabase()
+  const ext = nombreArchivo.includes(".") ? nombreArchivo.split(".").pop() : "pdf"
+  const path = `utoh/${empresaId}/${crypto.randomUUID()}.${ext}`
+  const { data, error } = await sb.storage.from(ADJUNTOS_BUCKET).createSignedUploadUrl(path)
+  if (error) throw new Error(error.message)
+  return { bucket: ADJUNTOS_BUCKET, path: data.path, token: data.token }
+}
+
+// Registra la ruta del documento subido en la empresa.
+export async function registrarUTOHDoc(empresaId: string, path: string) {
+  await guard(PERMISOS.ADMIN_EMPRESAS)
+  const sb = getSupabase()
+  const { error } = await sb.from("empresas").update({ utoh_doc_path: path }).eq("id", empresaId)
+  if (error) throw new Error(error.message)
+  revalidatePath("/admin/empresas")
+}
+
+export async function quitarUTOHDoc(empresaId: string) {
+  await guard(PERMISOS.ADMIN_EMPRESAS)
+  const sb = getSupabase()
+  await sb.from("empresas").update({ utoh_doc_path: null }).eq("id", empresaId)
+  revalidatePath("/admin/empresas")
+}
+
+// Devuelve una URL firmada (temporal) para ver/descargar el documento de UTOH.
+export async function urlUTOHDoc(empresaId: string): Promise<string | null> {
+  await guard(PERMISOS.ADMIN_EMPRESAS)
+  const sb = getSupabase()
+  const { data } = await sb.from("empresas").select("utoh_doc_path").eq("id", empresaId).maybeSingle()
+  const path = (data as { utoh_doc_path?: string | null } | null)?.utoh_doc_path
+  return path ? urlFirmada(path) : null
 }
 
 // --- Usuarios ---------------------------------------------------------------

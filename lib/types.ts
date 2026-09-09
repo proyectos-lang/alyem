@@ -19,6 +19,10 @@ export interface Empresa {
   codigo_sn: string | null
   telefono_1: string | null
   logo_url: string | null
+  // Permiso de UTOH (aduana): número, vencimiento y documento adjunto (bucket privado).
+  utoh_numero: string | null
+  utoh_vencimiento: string | null
+  utoh_doc_path: string | null
   // Si la empresa es cliente final de un cliente aduanero, apunta a la empresa
   // de ese cliente aduanero. null = cliente directo de Alyem.
   cliente_aduanero_id: string | null
