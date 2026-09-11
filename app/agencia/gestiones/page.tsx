@@ -7,6 +7,7 @@ import { Buscador } from "@/components/buscador"
 import { GestionesTabla } from "@/components/gestiones-tabla"
 import { FiltrosOperaciones } from "@/components/filtros-operaciones"
 import { TipoOperacionTabs } from "@/components/tipo-operacion-tabs"
+import { FaseTabs } from "@/components/fase-tabs"
 import { AgruparOperaciones } from "@/components/agrupar-operaciones"
 import { SeccionColapsable } from "@/components/seccion-colapsable"
 import { SetupNotice } from "@/components/setup-notice"
@@ -14,7 +15,7 @@ import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones, getEstadosCatalogo } from "@/lib/data/gestiones"
 import { listarAduanas } from "@/lib/data/aduanas"
 import { ordenarGestiones } from "@/lib/sort"
-import { filtrarGestiones } from "@/lib/filtros"
+import { filtrarGestiones, esFinalizada } from "@/lib/filtros"
 import { puede, esAgencia, PERMISOS } from "@/lib/permisos"
 import { marcasClienteAduanero } from "@/lib/data/asignaciones"
 import { seccionesPorOperador, seccionesPorCliente, seccionesPorOperadorCliente } from "@/lib/agrupaciones"
@@ -24,12 +25,13 @@ export const dynamic = "force-dynamic"
 export default async function GestionesAgencia({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; dir?: string; estado?: string; aduana?: string; canal?: string; tipo?: string; ca?: string; group?: string; eta_desde?: string; eta_hasta?: string; creada_desde?: string; creada_hasta?: string }>
+  searchParams: Promise<{ q?: string; sort?: string; dir?: string; estado?: string; aduana?: string; canal?: string; tipo?: string; fase?: string; ca?: string; group?: string; eta_desde?: string; eta_hasta?: string; creada_desde?: string; creada_hasta?: string }>
 }) {
   const usuario = await usuarioActivoSeguro()
   if (!usuario) return <SetupNotice mensaje="Configura Supabase para ver las gestiones." />
   const sp = await searchParams
   const { q, sort, dir, estado, aduana, canal, tipo, ca, group: groupRaw } = sp
+  const fase = sp.fase === "proceso" || sp.fase === "finalizadas" ? sp.fase : ""
   const group = ["operador", "cliente", "operador_cliente"].includes(groupRaw ?? "") ? groupRaw : ""
 
   const [todas, estados, aduanas] = await Promise.all([
@@ -37,11 +39,17 @@ export default async function GestionesAgencia({
     getEstadosCatalogo(),
     listarAduanas(true),
   ])
-  let filtradas = filtrarGestiones(todas, {
+  // Filtros comunes salvo la fase: sobre este conjunto se cuentan las pestañas
+  // (En proceso / Finalizadas), para que los contadores reflejen los demás filtros.
+  const filtroBase = {
     estado, aduana, canal, tipo,
     etaDesde: sp.eta_desde, etaHasta: sp.eta_hasta,
     creadaDesde: sp.creada_desde, creadaHasta: sp.creada_hasta,
-  })
+  }
+  const sinFase = filtrarGestiones(todas, filtroBase)
+  const finalizadasCount = sinFase.filter(esFinalizada).length
+  const enProcesoCount = sinFase.length - finalizadasCount
+  let filtradas = filtrarGestiones(todas, { ...filtroBase, fase })
 
   // Marca diferencial de cliente aduanero: solo la ve Alyem (operador/admin).
   const marcas = esAgencia(usuario.rol)
@@ -87,6 +95,7 @@ export default async function GestionesAgencia({
         />
         <div className="mt-6 flex flex-col gap-4">
           <Buscador />
+          <FaseTabs enProceso={enProcesoCount} finalizadas={finalizadasCount} />
           <TipoOperacionTabs />
           <FiltrosOperaciones estados={estados} aduanas={aduanas} clientesAduaneros={clientesAduaneros} />
           <AgruparOperaciones />
