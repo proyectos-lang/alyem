@@ -38,6 +38,19 @@ async function existeReferencia(ref: string): Promise<boolean> {
   return (count ?? 0) > 0
 }
 
+// Referencia única a partir del BL: acepta CUALQUIER BL (cualquier carácter y
+// longitud) y, si ese BL ya existe (BL consolidado con varias declaraciones),
+// diferencia la referencia con un sufijo (BL, BL-2, BL-3…). El BL real se conserva
+// aparte en carta_porte.
+async function referenciaUnicaDesdeBL(bl: string): Promise<string> {
+  if (!(await existeReferencia(bl))) return bl
+  for (let n = 2; n < 1000; n++) {
+    const cand = `${bl}-${n}`
+    if (!(await existeReferencia(cand))) return cand
+  }
+  return `${bl}-${Date.now()}`
+}
+
 // Sube los archivos adjuntos de un formulario (inputs 'archivo_<tipoDocumentoId>').
 async function subirAdjuntosDeForm(form: FormData, gestionId: string, usuarioId: string, esAgencia: boolean) {
   const sb = getSupabase()
@@ -67,7 +80,20 @@ async function subirAdjuntosDeForm(form: FormData, gestionId: string, usuarioId:
 }
 
 // Paso 1 — Notificación del embarque. El cliente monta la orden (o la agencia a su nombre).
-export async function crearGestion(form: FormData): Promise<string> {
+// Devuelve un resultado (no lanza) para que el usuario vea el motivo REAL del fallo:
+// en producción, Next.js redacta el mensaje de los errores lanzados por server actions.
+export async function crearGestion(
+  form: FormData,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  try {
+    const id = await crearGestionInterno(form)
+    return { ok: true, id }
+  } catch (e) {
+    return { ok: false, error: (e as Error)?.message || "No se pudo crear la operación." }
+  }
+}
+
+async function crearGestionInterno(form: FormData): Promise<string> {
   const usuario = await getUsuarioActivo()
   exigir(usuario, PERMISOS.GESTION_CREAR)
   const sb = getSupabase()
@@ -95,11 +121,12 @@ export async function crearGestion(form: FormData): Promise<string> {
     consignatario = (emp?.nombre as string) ?? null
   }
 
-  // Referencia = SIEMPRE el número de BL cuando se proporciona (requisito del
-  // negocio: la referencia es el BL). El correlativo GES-YYYY-NNNN queda solo
-  // como respaldo cuando aún no hay BL.
+  // Referencia = el número de BL tal cual (cualquier carácter y longitud; se
+  // conservan los ceros a la izquierda). Si ese BL ya existe, se diferencia con
+  // un sufijo (BL-2, BL-3…) para no bloquear el registro; el BL real va en
+  // carta_porte. Sin BL, correlativo GES-YYYY-NNNN de respaldo.
   const bl = ((form.get("numero_bl") as string) || "").trim()
-  const referencia = bl || (await siguienteReferencia())
+  const referencia = bl ? await referenciaUnicaDesdeBL(bl) : await siguienteReferencia()
 
   const g = {
     referencia,
@@ -354,6 +381,33 @@ export async function editarDatosGestion(form: FormData) {
   const bl = form.has("numero_bl") ? ((form.get("numero_bl") as string) || "").trim() : ""
   if (form.has("numero_bl")) patch.carta_porte = bl || null
 
+  // Reasignación de cliente (empresa): SOLO administradores. Cambia el cliente
+  // dueño de la operación (p. ej. cuando se cargó a la empresa equivocada). Se
+  // valida que la empresa exista y esté activa; se audita y se notifica al
+  // nuevo cliente y a los operadores de su alcance.
+  let empresaNueva: string | null = null
+  let empresaAnterior: string | null = null
+  if (form.has("empresa_id") && (form.get("empresa_id") as string)) {
+    if (usuario!.rol !== "admin") {
+      throw new Error("Solo un administrador puede cambiar el cliente de una operación.")
+    }
+    const destino = form.get("empresa_id") as string
+    const { data: gActual } = await sb.from("gestiones").select("empresa_id").eq("id", gestionId).maybeSingle()
+    empresaAnterior = (gActual as { empresa_id?: string } | null)?.empresa_id ?? null
+    if (destino !== empresaAnterior) {
+      const { data: emp } = await sb
+        .from("empresas")
+        .select("id, nombre, activo")
+        .eq("id", destino)
+        .maybeSingle()
+      const e = emp as { id: string; nombre: string; activo: boolean } | null
+      if (!e) throw new Error("El cliente seleccionado no existe.")
+      if (!e.activo) throw new Error("El cliente seleccionado está inactivo.")
+      empresaNueva = destino
+      patch.empresa_id = destino
+    }
+  }
+
   // Estado actual (para reglas de bloqueo). Se consulta una sola vez.
   const { data: est } = await sb
     .from("v_gestion_estado_actual")
@@ -407,6 +461,24 @@ export async function editarDatosGestion(form: FormData) {
       for (const c of POSIBLES_SIN_MIGRAR) delete (rest as Record<string, unknown>)[c]
       if (Object.keys(rest).length > 0) await sb.from("gestiones").update(rest).eq("id", gestionId)
     }
+  }
+
+  // Reasignación de cliente: deja rastro de auditoría y avisa al nuevo cliente
+  // y a los operadores de su alcance (la operación ya está en la nueva empresa).
+  if (empresaNueva) {
+    const { data: g } = await sb.from("gestiones").select("referencia").eq("id", gestionId).maybeSingle()
+    const referencia = (g as { referencia?: string } | null)?.referencia ?? gestionId
+    const { data: emps } = await sb.from("empresas").select("id, nombre").in("id", [empresaNueva, empresaAnterior].filter(Boolean) as string[])
+    const nombreDe = (id: string | null) => (emps as { id: string; nombre: string }[] ?? []).find((e) => e.id === id)?.nombre ?? "—"
+    await sb.from("eventos").insert({
+      gestion_id: gestionId,
+      tipo: "observacion",
+      observacion: `Cliente reasignado de “${nombreDe(empresaAnterior)}” a “${nombreDe(empresaNueva)}” por ${usuario!.nombre}.`,
+      interno: true, // corrección administrativa: no se muestra al cliente
+      usuario_id: usuario!.id,
+    })
+    await notificarEmpresa(empresaNueva, "gestion_reasignada", `La operación ${referencia} fue asignada a tu empresa.`, gestionId)
+    await notificarAgencia("gestion_reasignada", `${referencia}: cliente reasignado a ${nombreDe(empresaNueva)}.`, gestionId)
   }
 
   // Si llega el BL (por primera vez) y la referencia aún es el correlativo temporal

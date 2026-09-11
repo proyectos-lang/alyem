@@ -11,11 +11,23 @@ import { useModalClose } from "@/components/ui/modal"
 import { toast } from "sonner"
 import { editarDatosGestion } from "@/lib/actions/gestiones"
 import { FacturasInput } from "@/components/facturas-input"
-import type { Aduana, Gestion } from "@/lib/types"
+import type { Aduana, Empresa, Gestion } from "@/lib/types"
 import type { Regimen } from "@/lib/data/regimenes"
 
 // Edición de los datos de cabecera de la operación (Paso 1).
-export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; aduanas: Aduana[]; regimenes?: Regimen[] }) {
+export function EditarDatosForm({
+  g,
+  aduanas,
+  regimenes = [],
+  empresas = [],
+  esAdmin = false,
+}: {
+  g: Gestion
+  aduanas: Aduana[]
+  regimenes?: Regimen[]
+  empresas?: Pick<Empresa, "id" | "nombre">[]
+  esAdmin?: boolean
+}) {
   const router = useRouter()
   const close = useModalClose()
   const [pending, startTransition] = useTransition()
@@ -42,6 +54,19 @@ export function EditarDatosForm({ g, aduanas, regimenes = [] }: { g: Gestion; ad
   return (
     <form onSubmit={onSubmit} className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {esAdmin && (
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label>Cliente (empresa)</Label>
+            <Select name="empresa_id" defaultValue={g.empresa_id}>
+              {empresas.map((e) => (
+                <option key={e.id} value={e.id}>{e.nombre}</option>
+              ))}
+            </Select>
+            <span className="text-[11px] text-muted-foreground">
+              Reasigna la operación a otro cliente. El nuevo cliente verá la operación en su panel.
+            </span>
+          </div>
+        )}
         <div className="flex flex-col gap-1.5">
           <Label>Tipo de operación</Label>
           <Select name="tipo_operacion" defaultValue={g.tipo_operacion}>

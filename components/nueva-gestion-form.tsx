@@ -84,7 +84,14 @@ export function NuevaGestionForm({
 
     startTransition(async () => {
       try {
-        const id = await crearGestion(fd)
+        const res = await crearGestion(fd)
+        if (!res.ok) {
+          setSubiendo(null)
+          setError(res.error)
+          toast.error(res.error)
+          return
+        }
+        const id = res.id
         // Subir cada adjunto directo a Storage (navegador → Supabase, sin server action).
         // Secuencial, con progreso por archivo; si uno falla, sigue con los demás.
         const fallidos: string[] = []
@@ -98,8 +105,9 @@ export function NuevaGestionForm({
             const up = await sb.storage.from(bucket).uploadToSignedUrl(path, token, file, { contentType: file.type || undefined })
             if (up.error) throw new Error(up.error.message)
             await registrarAdjunto(id, tipoId || null, path, file.name)
-          } catch {
-            fallidos.push(file.name)
+          } catch (e) {
+            const motivo = (e as Error)?.message
+            fallidos.push(motivo ? `${file.name} (${motivo})` : file.name)
           }
         }
         setSubiendo(null)

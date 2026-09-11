@@ -33,7 +33,7 @@ import {
 import { getTiposDocumento } from "@/lib/data/catalogos"
 import { listarAduanas } from "@/lib/data/aduanas"
 import { listarRegimenes } from "@/lib/data/regimenes"
-import { marcasClienteAduanero } from "@/lib/data/asignaciones"
+import { marcasClienteAduanero, empresasParaAgencia } from "@/lib/data/asignaciones"
 import { puede, esAgencia, PERMISOS } from "@/lib/permisos"
 import { fecha } from "@/lib/format"
 
@@ -77,6 +77,8 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
   const agencia = esAgencia(usuario.rol)
   // Marca diferencial: si la empresa es cliente de un cliente aduanero, Alyem lo ve.
   const marcaCA = agencia ? (await marcasClienteAduanero([g.empresa_id])).get(g.empresa_id) : undefined
+  // Solo el admin puede reasignar el cliente: carga las empresas para el selector.
+  const empresas = usuario.rol === "admin" ? await empresasParaAgencia(usuario) : []
   const docsPendientes = requeridos.filter((r) => !r.cumplido).length
   const esFinal = g.estado?.tipo === "final" || g.estado?.tipo === "cancelada"
 
@@ -141,7 +143,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                 {agencia && <CopiarTrack token={g.public_token} />}
                 {usuario.rol === "admin" && !esFinal && (
                   <Modal title="Editar datos de la operación" className="max-w-2xl" trigger={<Button variant="outline"><Pencil /> Editar</Button>}>
-                    <EditarDatosForm g={g} aduanas={aduanas} regimenes={regimenes} />
+                    <EditarDatosForm g={g} aduanas={aduanas} regimenes={regimenes} empresas={empresas} esAdmin={usuario.rol === "admin"} />
                   </Modal>
                 )}
                 {agencia && (
