@@ -13,6 +13,7 @@ import { EditarDatosForm } from "@/components/editar-datos-form"
 import { DocumentosPanel } from "@/components/documentos-panel"
 import { MensajesPanel } from "@/components/mensajes-panel"
 import { ProcesoPanel } from "@/components/proceso-panel"
+import { TrackingPanel } from "@/components/tracking-panel"
 import { CalificarForm } from "@/components/calificar-form"
 import { StarDisplay } from "@/components/star-rating"
 import { DIMENSIONES } from "@/lib/satisfaccion"
@@ -34,6 +35,8 @@ import { getTiposDocumento } from "@/lib/data/catalogos"
 import { listarAduanas } from "@/lib/data/aduanas"
 import { listarRegimenes } from "@/lib/data/regimenes"
 import { marcasClienteAduanero, empresasParaAgencia } from "@/lib/data/asignaciones"
+import { historialTracking } from "@/lib/actions/tracking"
+import { deducirNaviera } from "@/lib/tracking/jsoncargo"
 import { puede, esAgencia, PERMISOS } from "@/lib/permisos"
 import { fecha } from "@/lib/format"
 
@@ -79,6 +82,9 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
   const marcaCA = agencia ? (await marcasClienteAduanero([g.empresa_id])).get(g.empresa_id) : undefined
   // Solo el admin puede reasignar el cliente: carga las empresas para el selector.
   const empresas = usuario.rol === "admin" ? await empresasParaAgencia(usuario) : []
+  // Tracking de contenedores: histórico guardado (no gasta llamadas) + naviera sugerida.
+  const historialTk = await historialTracking(id)
+  const navieraSugerida = deducirNaviera(g.naviera, g.carta_porte)
   const docsPendientes = requeridos.filter((r) => !r.cumplido).length
   const esFinal = g.estado?.tipo === "final" || g.estado?.tipo === "cancelada"
 
@@ -218,6 +224,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
           <TabsList>
             {agencia && <TabsTrigger value="proceso">Proceso</TabsTrigger>}
             <TabsTrigger value="timeline">Trazabilidad</TabsTrigger>
+            <TabsTrigger value="tracking">Tracking</TabsTrigger>
             <TabsTrigger value="documentos">
               Documentos{docsPendientes > 0 ? ` (${docsPendientes})` : ""}
             </TabsTrigger>
@@ -244,6 +251,21 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
             <Card>
               <CardHeader><CardTitle>Trazabilidad de la operación</CardTitle></CardHeader>
               <CardContent><Timeline eventos={eventos} /></CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tracking">
+            <Card>
+              <CardHeader><CardTitle>Tracking del contenedor</CardTitle></CardHeader>
+              <CardContent>
+                <TrackingPanel
+                  gestionId={g.id}
+                  bl={g.carta_porte}
+                  navieraSugerida={navieraSugerida}
+                  historial={historialTk}
+                  puedeConsultar={agencia}
+                />
+              </CardContent>
             </Card>
           </TabsContent>
 
