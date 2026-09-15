@@ -6,7 +6,7 @@ import { getUsuarioActivo } from "../session"
 import { esAgencia } from "../permisos"
 import { empresasVisibles } from "../data/asignaciones"
 import {
-  consultarBol, consultarContenedor, esLineaValida, deducirNaviera,
+  consultarBol, consultarContenedor, esLineaValida, deducirNaviera, consultarStats,
   type ContainerResponse, type LineaNaviera, TrackingError,
 } from "../tracking/jsoncargo"
 
@@ -155,6 +155,7 @@ export async function consultarTracking(
     }
     const { data: ins, error } = await sb.from("tracking_consultas").insert(fila).select("*").single()
     if (error) return { ok: false, error: `No se pudo guardar la consulta: ${error.message}` }
+    invalidarSaldo() // se gastaron llamadas: el próximo saldo se refresca
     revalidatePath(`/g/${gestionId}`)
     return { ok: true, consulta: ins as ConsultaTracking }
   } catch (e) {
@@ -164,7 +165,57 @@ export async function consultarTracking(
       gestion_id: gestionId, bl, shipping_line: linea, consultado_por: usuario.id,
       ok: false, error: msg, llamadas,
     })
+    if (llamadas > 0) invalidarSaldo() // se gastaron llamadas antes de fallar
     revalidatePath(`/g/${gestionId}`)
+    return { ok: false, error: msg }
+  }
+}
+
+export interface SaldoTracking {
+  plan: string
+  total: number
+  usadas: number
+  disponibles: number
+}
+
+export type ResultadoSaldo =
+  | { ok: true; saldo: SaldoTracking }
+  | { ok: false; error: string }
+
+// Caché en memoria del saldo: el endpoint de stats no gasta cuota, pero se
+// consulta al abrir el modal, así que evitamos llamadas repetidas seguidas.
+let saldoCache: { valor: SaldoTracking; ts: number } | null = null
+const SALDO_TTL_MS = 5 * 60 * 1000
+
+// Descarta el saldo cacheado (tras gastar llamadas) para forzar su relectura.
+function invalidarSaldo() {
+  saldoCache = null
+}
+
+// Saldo de consultas del plan (endpoint de stats; NO gasta cuota de tracking).
+// Solo para la agencia. Cacheado 5 minutos; forzar=true lo refresca.
+export async function saldoTracking(forzar = false): Promise<ResultadoSaldo> {
+  const usuario = await getUsuarioActivo()
+  if (!usuario) return { ok: false, error: "Sesión no válida." }
+  if (!esAgencia(usuario.rol)) return { ok: false, error: "Solo la agencia puede ver el saldo." }
+  if (!process.env.JSONCARGO_API_KEY) {
+    return { ok: false, error: "El tracking no está configurado (falta JSONCARGO_API_KEY en el servidor)." }
+  }
+  if (!forzar && saldoCache && Date.now() - saldoCache.ts < SALDO_TTL_MS) {
+    return { ok: true, saldo: saldoCache.valor }
+  }
+  try {
+    const s = await consultarStats()
+    const saldo: SaldoTracking = {
+      plan: s.plan,
+      total: s.requests_total,
+      usadas: s.requests_made,
+      disponibles: s.requests_available,
+    }
+    saldoCache = { valor: saldo, ts: Date.now() }
+    return { ok: true, saldo }
+  } catch (e) {
+    const msg = e instanceof TrackingError ? e.message : (e as Error).message
     return { ok: false, error: msg }
   }
 }

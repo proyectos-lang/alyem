@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   RefreshCw, Ship, MapPin, Anchor, CalendarClock, PackageSearch, Container as ContainerIcon,
-  ArrowRight, History, AlertTriangle,
+  ArrowRight, History, AlertTriangle, Gauge,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,7 +15,7 @@ import { Select } from "@/components/ui/select"
 import { Modal, useModalClose } from "@/components/ui/modal"
 import { fechaHora, fecha } from "@/lib/format"
 import { NAVIERAS, etiquetaNaviera } from "@/lib/tracking/jsoncargo"
-import { consultarTracking, type ConsultaTracking } from "@/lib/actions/tracking"
+import { consultarTracking, saldoTracking, type ConsultaTracking, type SaldoTracking } from "@/lib/actions/tracking"
 
 function Dato({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string | null }) {
   return (
@@ -38,6 +38,22 @@ function FormNuevaConsulta({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [saldo, setSaldo] = useState<SaldoTracking | null>(null)
+  const [saldoError, setSaldoError] = useState<string | null>(null)
+  const [cargandoSaldo, setCargandoSaldo] = useState(true)
+
+  // Al abrir el modal, consulta el saldo del plan (no gasta cuota de tracking).
+  useEffect(() => {
+    let vivo = true
+    setCargandoSaldo(true)
+    saldoTracking().then((res) => {
+      if (!vivo) return
+      if (res.ok) setSaldo(res.saldo)
+      else setSaldoError(res.error)
+      setCargandoSaldo(false)
+    })
+    return () => { vivo = false }
+  }, [])
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -50,6 +66,8 @@ function FormNuevaConsulta({
       if (!res.ok) {
         setError(res.error)
         toast.error(res.error)
+        // Refresca el saldo: un fallo puede haber gastado llamadas igualmente.
+        saldoTracking().then((s) => s.ok && setSaldo(s.saldo))
         return
       }
       toast.success(`Consulta realizada (${res.consulta.llamadas} llamada${res.consulta.llamadas === 1 ? "" : "s"}).`)
@@ -59,8 +77,33 @@ function FormNuevaConsulta({
     })
   }
 
+  const bajo = saldo != null && saldo.disponibles <= 100
+
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      {/* Saldo de consultas del plan */}
+      <div className={
+        "flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm " +
+        (bajo
+          ? "border-destructive/40 bg-destructive/5 text-destructive"
+          : "border-border bg-muted/40")
+      }>
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+          <Gauge className="size-4" /> Consultas disponibles
+        </span>
+        <span className="text-right">
+          {cargandoSaldo ? (
+            <span className="text-xs text-muted-foreground">Cargando…</span>
+          ) : saldo ? (
+            <>
+              <span className="text-base font-semibold tabular-nums">{saldo.disponibles.toLocaleString("es")}</span>
+              <span className="text-xs text-muted-foreground"> / {saldo.total.toLocaleString("es")}</span>
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground">{saldoError ?? "No disponible"}</span>
+          )}
+        </span>
+      </div>
       <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
         Cada consulta gasta llamadas del plan (1 por el BL + 1 por cada contenedor). Confirma con la contraseña de consulta.
       </p>
