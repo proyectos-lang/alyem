@@ -85,6 +85,9 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
   // Tracking de contenedores: histórico guardado (no gasta llamadas) + naviera sugerida.
   const historialTk = await historialTracking(id)
   const navieraSugerida = deducirNaviera(g.naviera, g.carta_porte)
+  // Primer contenedor registrado en la operación (respaldo cuando el "BL" es una
+  // referencia/booking que la naviera no encuentra por BL).
+  const contenedorSugerido = (g.contenedores ?? "").split(/[\n,;]+/).map((c) => c.trim()).filter(Boolean)[0] ?? null
   const docsPendientes = requeridos.filter((r) => !r.cumplido).length
   const esFinal = g.estado?.tipo === "final" || g.estado?.tipo === "cancelada"
 
@@ -262,6 +265,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                   gestionId={g.id}
                   bl={g.carta_porte}
                   navieraSugerida={navieraSugerida}
+                  contenedorSugerido={contenedorSugerido}
                   historial={historialTk}
                   puedeConsultar={agencia}
                 />

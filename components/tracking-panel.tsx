@@ -28,10 +28,11 @@ function Dato({ icon, label, value }: { icon: React.ReactNode; label: string; va
 
 // Formulario del modal de nueva consulta (contraseña + naviera).
 function FormNuevaConsulta({
-  gestionId, navieraSugerida, onDone,
+  gestionId, navieraSugerida, contenedorSugerido, onDone,
 }: {
   gestionId: string
   navieraSugerida: string | null
+  contenedorSugerido: string | null
   onDone: () => void
 }) {
   const close = useModalClose()
@@ -61,8 +62,9 @@ function FormNuevaConsulta({
     const fd = new FormData(e.currentTarget)
     const password = (fd.get("password") as string) ?? ""
     const linea = (fd.get("linea") as string) ?? ""
+    const contenedor = ((fd.get("contenedor") as string) ?? "").trim()
     startTransition(async () => {
-      const res = await consultarTracking(gestionId, password, linea)
+      const res = await consultarTracking(gestionId, password, linea, contenedor)
       if (!res.ok) {
         setError(res.error)
         toast.error(res.error)
@@ -128,6 +130,20 @@ function FormNuevaConsulta({
         )}
       </div>
       <div className="flex flex-col gap-1.5">
+        <Label>Número de contenedor (opcional)</Label>
+        <Input
+          name="contenedor"
+          autoComplete="off"
+          placeholder="Ej. TCNU3347004"
+          defaultValue={contenedorSugerido ?? ""}
+          className="font-mono"
+        />
+        <span className="text-[11px] text-muted-foreground">
+          Si el BL registrado es una referencia/booking y la naviera no lo encuentra por BL,
+          escribe aquí el número de contenedor y se consultará directamente por él.
+        </span>
+      </div>
+      <div className="flex flex-col gap-1.5">
         <Label>Contraseña de consulta</Label>
         <Input name="password" type="password" autoComplete="off" placeholder="••••••••" required />
       </div>
@@ -142,11 +158,12 @@ function FormNuevaConsulta({
 }
 
 export function TrackingPanel({
-  gestionId, bl, navieraSugerida, historial, puedeConsultar,
+  gestionId, bl, navieraSugerida, contenedorSugerido = null, historial, puedeConsultar,
 }: {
   gestionId: string
   bl: string | null
   navieraSugerida: string | null
+  contenedorSugerido?: string | null
   historial: ConsultaTracking[]
   puedeConsultar: boolean
 }) {
@@ -154,27 +171,33 @@ export function TrackingPanel({
   const [verHistorial, setVerHistorial] = useState(false)
   const ultima = historial[0]
   const exitosas = historial.filter((h) => h.ok)
+  const puedeIdentificar = !!bl || !!contenedorSugerido
 
-  const botonConsulta = puedeConsultar && bl ? (
+  const botonConsulta = puedeConsultar && puedeIdentificar ? (
     <Modal
       title="Nueva consulta de tracking"
-      description={`BL ${bl}`}
+      description={bl ? `BL ${bl}` : `Contenedor ${contenedorSugerido}`}
       trigger={
         <Button variant="outline">
           <RefreshCw className="size-4" /> {ultima ? "Nueva consulta" : "Consultar tracking"}
         </Button>
       }
     >
-      <FormNuevaConsulta gestionId={gestionId} navieraSugerida={navieraSugerida} onDone={() => router.refresh()} />
+      <FormNuevaConsulta
+        gestionId={gestionId}
+        navieraSugerida={navieraSugerida}
+        contenedorSugerido={contenedorSugerido}
+        onDone={() => router.refresh()}
+      />
     </Modal>
   ) : null
 
-  if (!bl) {
+  if (!puedeIdentificar) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
           <PackageSearch className="size-8 opacity-50" />
-          Registra el BL de la operación para poder consultar el tracking del contenedor.
+          Registra el BL o el número de contenedor de la operación para poder consultar el tracking.
         </CardContent>
       </Card>
     )

@@ -80,6 +80,7 @@ export async function consultarTracking(
   gestionId: string,
   password: string,
   lineaElegida?: string,
+  contenedorManual?: string,
 ): Promise<ResultadoConsulta> {
   const usuario = await getUsuarioActivo()
   if (!usuario) return { ok: false, error: "Sesión no válida." }
@@ -104,13 +105,16 @@ export async function consultarTracking(
   }
 
   const bl = ((g as { carta_porte?: string }).carta_porte ?? "").trim()
-  // Contenedores registrados en la operación (campo multivalor, uno por línea):
-  // se usan como respaldo si la búsqueda por BL no encuentra nada (p. ej. cuando
-  // el "BL" registrado es en realidad una referencia/booking y no un BL real).
-  const contenedoresOp = ((g as { contenedores?: string }).contenedores ?? "")
-    .split(/[\n,;]+/)
-    .map((c) => c.trim().toUpperCase())
-    .filter(Boolean)
+  // Contenedores a usar como respaldo si la búsqueda por BL no encuentra nada
+  // (p. ej. cuando el "BL" registrado es en realidad una referencia/booking y no
+  // un BL real). Prioridad: el contenedor indicado a mano en el modal, y luego
+  // los contenedores registrados en la operación (campo multivalor, uno por línea).
+  const normalizar = (s: string) =>
+    s.split(/[\n,;]+/).map((c) => c.trim().toUpperCase()).filter(Boolean)
+  const contenedoresOp = [
+    ...normalizar(contenedorManual ?? ""),
+    ...normalizar((g as { contenedores?: string }).contenedores ?? ""),
+  ].filter((c, i, a) => a.indexOf(c) === i) // sin duplicados, preservando orden
   if (!bl && contenedoresOp.length === 0) {
     return { ok: false, error: "La operación no tiene BL ni contenedor registrado para consultar." }
   }
@@ -131,7 +135,10 @@ export async function consultarTracking(
   // 1) Intento por BL → lista de contenedores. Si el "BL" registrado no es un BL
   // real (p. ej. una referencia/booking), la API responde error o 0 contenedores:
   // se guarda el motivo y se pasa al respaldo por número de contenedor.
-  if (bl) {
+  // Si el usuario indicó un contenedor a mano, se salta el intento por BL (evita
+  // gastar una llamada 4xx cuando ya sabemos que el BL no sirve).
+  const hayContenedorManual = normalizar(contenedorManual ?? "").length > 0
+  if (bl && !hayContenedorManual) {
     try {
       bol = await consultarBol(bl, linea)
       llamadas += 1
@@ -179,7 +186,9 @@ export async function consultarTracking(
       shipping_line: linea,
       consultado_por: usuario.id,
       ok: true,
-      error: porContenedor && bl ? "Sin resultados por BL; resuelto por número de contenedor." : null,
+      error: porContenedor && bl && !hayContenedorManual
+        ? "Sin resultados por BL; resuelto por número de contenedor."
+        : null,
       llamadas,
       payload,
       contenedores: bol?.associated_containers ?? detalles.length,
