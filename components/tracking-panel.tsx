@@ -70,7 +70,13 @@ function FormNuevaConsulta({
         saldoTracking().then((s) => s.ok && setSaldo(s.saldo))
         return
       }
-      toast.success(`Consulta realizada (${res.consulta.llamadas} llamada${res.consulta.llamadas === 1 ? "" : "s"}).`)
+      const llamadasTxt = `${res.consulta.llamadas} llamada${res.consulta.llamadas === 1 ? "" : "s"}`
+      if (res.consulta.error) {
+        // Éxito vía respaldo por contenedor (el BL no dio resultados).
+        toast.success(`Resuelto por número de contenedor (${llamadasTxt}).`)
+      } else {
+        toast.success(`Consulta realizada (${llamadasTxt}).`)
+      }
       close()
       onDone()
       router.refresh()

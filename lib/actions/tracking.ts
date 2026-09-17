@@ -92,7 +92,7 @@ export async function consultarTracking(
   const sb = getSupabase()
   const { data: g } = await sb
     .from("gestiones")
-    .select("empresa_id, carta_porte, naviera")
+    .select("empresa_id, carta_porte, naviera, contenedores")
     .eq("id", gestionId)
     .maybeSingle()
   if (!g) return { ok: false, error: "Operación no encontrada." }
@@ -104,7 +104,16 @@ export async function consultarTracking(
   }
 
   const bl = ((g as { carta_porte?: string }).carta_porte ?? "").trim()
-  if (!bl) return { ok: false, error: "La operación no tiene BL registrado para consultar." }
+  // Contenedores registrados en la operación (campo multivalor, uno por línea):
+  // se usan como respaldo si la búsqueda por BL no encuentra nada (p. ej. cuando
+  // el "BL" registrado es en realidad una referencia/booking y no un BL real).
+  const contenedoresOp = ((g as { contenedores?: string }).contenedores ?? "")
+    .split(/[\n,;]+/)
+    .map((c) => c.trim().toUpperCase())
+    .filter(Boolean)
+  if (!bl && contenedoresOp.length === 0) {
+    return { ok: false, error: "La operación no tiene BL ni contenedor registrado para consultar." }
+  }
 
   // Línea naviera: la elegida (validada) o deducida del BL/naviera.
   let linea: LineaNaviera | null = null
@@ -115,13 +124,45 @@ export async function consultarTracking(
   }
 
   let llamadas = 0
-  try {
-    // 1) BL → lista de contenedores.
-    const bol = await consultarBol(bl, linea)
-    llamadas += 1
-    const numeros = bol.associated_container_numbers ?? []
+  let numeros: string[] = []
+  let bol: Awaited<ReturnType<typeof consultarBol>> | null = null
+  let errorBl: string | null = null
 
-    // 2) Detalle de cada contenedor.
+  // 1) Intento por BL → lista de contenedores. Si el "BL" registrado no es un BL
+  // real (p. ej. una referencia/booking), la API responde error o 0 contenedores:
+  // se guarda el motivo y se pasa al respaldo por número de contenedor.
+  if (bl) {
+    try {
+      bol = await consultarBol(bl, linea)
+      llamadas += 1
+      numeros = bol.associated_container_numbers ?? []
+    } catch (e) {
+      errorBl = e instanceof TrackingError ? e.message : (e as Error).message
+      // Una respuesta 4xx de la API igual consume una llamada de la cuota.
+      if (e instanceof TrackingError && e.status) llamadas += 1
+    }
+  }
+
+  // 2) Respaldo automático: si el BL no dio contenedores, usar los contenedores
+  // registrados en la operación (consulta directa por número de contenedor).
+  const porContenedor = numeros.length === 0
+  if (porContenedor) numeros = contenedoresOp
+
+  if (numeros.length === 0) {
+    const msg = bl
+      ? `No se encontró tracking por el BL ${bl}${errorBl ? ` (${errorBl})` : ""} y la operación no tiene contenedores registrados para intentar como respaldo.`
+      : "La operación no tiene contenedores registrados para consultar."
+    await sb.from("tracking_consultas").insert({
+      gestion_id: gestionId, bl: bl || null, shipping_line: linea, consultado_por: usuario.id,
+      ok: false, error: msg, llamadas,
+    })
+    if (llamadas > 0) invalidarSaldo()
+    revalidatePath(`/g/${gestionId}`)
+    return { ok: false, error: msg }
+  }
+
+  try {
+    // 3) Detalle de cada contenedor.
     const detalles: ContainerResponse[] = []
     for (const n of numeros) {
       detalles.push(await consultarContenedor(n, linea))
@@ -129,17 +170,19 @@ export async function consultarTracking(
     }
 
     const primero = detalles[0]
-    const payload = { bol, contenedores: detalles }
+    const payload = { bol, contenedores: detalles, resuelto_por: porContenedor ? "contenedor" : "bl" }
+    // Si se resolvió por contenedor, refleja el BL real que reporte la API (si lo trae).
+    const blEfectivo = porContenedor ? (primero?.bill_of_lading ?? (bl || null)) : bl
     const fila = {
       gestion_id: gestionId,
-      bl,
+      bl: blEfectivo,
       shipping_line: linea,
       consultado_por: usuario.id,
       ok: true,
-      error: null,
+      error: porContenedor && bl ? "Sin resultados por BL; resuelto por número de contenedor." : null,
       llamadas,
       payload,
-      contenedores: bol.associated_containers ?? numeros.length,
+      contenedores: bol?.associated_containers ?? detalles.length,
       estado: primero?.container_status ?? null,
       ubicacion: primero?.last_location ?? null,
       proximo_destino: primero?.next_location ?? null,
@@ -151,7 +194,7 @@ export async function consultarTracking(
       atd_origen: fechaApi(primero?.atd_origin),
       eta_destino: fechaApi(primero?.eta_final_destination),
       ultimo_movimiento: fechaApi(primero?.last_movement_timestamp),
-      api_last_updated: primero?.last_updated ?? bol.last_updated ?? null,
+      api_last_updated: primero?.last_updated ?? bol?.last_updated ?? null,
     }
     const { data: ins, error } = await sb.from("tracking_consultas").insert(fila).select("*").single()
     if (error) return { ok: false, error: `No se pudo guardar la consulta: ${error.message}` }
@@ -162,7 +205,7 @@ export async function consultarTracking(
     const msg = e instanceof TrackingError ? e.message : (e as Error).message
     // Registra el intento fallido (con las llamadas ya gastadas) para trazabilidad.
     await sb.from("tracking_consultas").insert({
-      gestion_id: gestionId, bl, shipping_line: linea, consultado_por: usuario.id,
+      gestion_id: gestionId, bl: bl || null, shipping_line: linea, consultado_por: usuario.id,
       ok: false, error: msg, llamadas,
     })
     if (llamadas > 0) invalidarSaldo() // se gastaron llamadas antes de fallar
