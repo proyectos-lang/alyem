@@ -15,9 +15,21 @@ export interface FiltrosReporte {
   producto?: string // texto a buscar en campos de producto
 }
 
+export interface TrackingResumen {
+  ubicacion: string | null
+  puerto_carga: string | null
+  puerto_descarga: string | null
+  eta_destino: string | null
+  atd_origen: string | null
+  vessel: string | null
+  ultimo_movimiento: string | null
+  created_at: string
+}
+
 export interface FilaReporte extends GestionConEstado {
   doc_transporte?: string | null
   regimen_nombre?: string | null
+  tracking?: TrackingResumen | null
 }
 
 const SEL =
@@ -93,6 +105,25 @@ export async function filasReporte(
   }
   for (const g of filas) g.doc_transporte = docMap.get(g.id) ?? null
 
+  // Tracking del contenedor: la última consulta EXITOSA por gestión (la tabla es
+  // un histórico; se toma la más reciente con datos). Resiliente si la tabla aún
+  // no existe (pre-migración de tracking).
+  try {
+    const { data: tks } = await sb
+      .from("tracking_consultas")
+      .select("gestion_id, ubicacion, puerto_carga, puerto_descarga, eta_destino, atd_origen, vessel, ultimo_movimiento, created_at")
+      .in("gestion_id", ids)
+      .eq("ok", true)
+      .order("created_at", { ascending: false })
+    const tkMap = new Map<string, TrackingResumen>()
+    for (const t of (tks as (TrackingResumen & { gestion_id: string })[]) ?? []) {
+      if (!tkMap.has(t.gestion_id)) tkMap.set(t.gestion_id, t) // la primera = la más reciente
+    }
+    for (const g of filas) g.tracking = tkMap.get(g.id) ?? null
+  } catch {
+    /* tabla tracking_consultas inexistente: se ignora */
+  }
+
   return filas
 }
 
@@ -123,6 +154,15 @@ export function valorColumna(g: FilaReporte, key: string): string {
     case "prefijo": return g.aduana?.codigo ?? ""
     case "tipo_operacion": return TIPO_OP[g.tipo_operacion] ?? g.tipo_operacion
     case "regimen": return g.regimen_nombre ?? ""
+    // Tracking del contenedor (última consulta a la naviera).
+    case "tk_ubicacion": return g.tracking?.ubicacion ?? ""
+    case "tk_puerto_carga": return g.tracking?.puerto_carga ?? ""
+    case "tk_puerto_descarga": return g.tracking?.puerto_descarga ?? ""
+    case "tk_eta_destino": return g.tracking?.eta_destino ? fecha(g.tracking.eta_destino) : ""
+    case "tk_atd": return g.tracking?.atd_origen ? fecha(g.tracking.atd_origen) : ""
+    case "tk_vessel": return g.tracking?.vessel ?? ""
+    case "tk_ultimo_mov": return g.tracking?.ultimo_movimiento ? fechaHora(g.tracking.ultimo_movimiento) : ""
+    case "tk_fecha_consulta": return g.tracking?.created_at ? fechaHora(g.tracking.created_at) : ""
     default: return ""
   }
 }

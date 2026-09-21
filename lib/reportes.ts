@@ -27,6 +27,15 @@ export const COLUMNAS_REPORTE: ColumnaReporte[] = [
   { key: "contenedor", label: "Contenedor" },
   { key: "manifiesto", label: "Manifiesto" },
   { key: "prefijo", label: "Prefijo (código de aduana)" },
+  // Datos del tracking del contenedor (última consulta a la naviera).
+  { key: "tk_ubicacion", label: "Tracking: última ubicación" },
+  { key: "tk_puerto_carga", label: "Tracking: puerto de carga" },
+  { key: "tk_puerto_descarga", label: "Tracking: puerto de descarga" },
+  { key: "tk_eta_destino", label: "Tracking: ETA destino final" },
+  { key: "tk_atd", label: "Tracking: salida del origen (ATD)" },
+  { key: "tk_vessel", label: "Tracking: buque" },
+  { key: "tk_ultimo_mov", label: "Tracking: último movimiento" },
+  { key: "tk_fecha_consulta", label: "Tracking: fecha de última consulta" },
 ]
 
 // Columnas por defecto si no se selecciona ninguna.
