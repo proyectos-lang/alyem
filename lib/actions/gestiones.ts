@@ -416,9 +416,17 @@ export async function editarDatosGestion(form: FormData) {
     .maybeSingle()
   const estadoTipo = (est as { estado_tipo?: string } | null)?.estado_tipo
 
-  // Regla: operación cerrada o finalizada → nadie edita (ni un administrador).
+  // Regla: operación cerrada o finalizada → no se editan sus datos, con UNA
+  // excepción: el número de ENP (numero_np) puede corregirse siempre. Si el
+  // patch trae numero_np, se conserva solo ese campo; cualquier otro se descarta.
   if (estadoTipo === "final" || estadoTipo === "cancelada") {
-    throw new Error("La operación está cerrada o finalizada: ya no se pueden editar sus datos.")
+    if ("numero_np" in patch) {
+      for (const c of Object.keys(patch)) {
+        if (c !== "numero_np") delete patch[c]
+      }
+    } else {
+      throw new Error("La operación está cerrada o finalizada: ya no se pueden editar sus datos.")
+    }
   }
 
   // Regla: BL, número de declaración y número de ENP son inmutables una vez

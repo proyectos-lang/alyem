@@ -79,6 +79,9 @@ export function ProcesoPanel({
         // Etapa actual editable: se muestra el formulario en línea con botón "Guardar"
         // (permite guardar parcialmente sin avanzar). Las demás usan el modal.
         const editarInline = enCurso && editable && paso.campos.length > 0
+        // Excepción: el número de ENP (paso "Documentos faltantes / ENP") se puede
+        // corregir SIEMPRE, incluso con la operación cerrada/finalizada.
+        const editableEstePaso = editable || (puedeEditar && bloqueada && paso.nombre === "Documentos faltantes / ENP")
 
         return (
           <Card
@@ -123,9 +126,10 @@ export function ProcesoPanel({
                     <p className="text-xs text-muted-foreground">{paso.descripcion}</p>
                   </div>
                 </div>
-                {!editarInline && editable && paso.campos.length > 0 && (
+                {!editarInline && editableEstePaso && paso.campos.length > 0 && (
                   // El Paso 1 (Notificación) y la ENP son editables por quien pueda editar
-                  // (operador incluido) aunque el proceso ya haya avanzado (NP pendiente).
+                  // (operador incluido) aunque el proceso ya haya avanzado (NP pendiente)
+                  // o la operación esté cerrada (solo la ENP).
                   enCurso || (completado && esAdmin) || etapaSiempreEditable(paso.nombre) ? (
                     <Modal
                       title={paso.nombre}

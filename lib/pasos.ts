@@ -231,8 +231,10 @@ export const OPCIONALES_AVANCE = new Set<string>([
 ])
 
 // Identificadores oficiales que NO se pueden editar una vez registrados (por nadie):
-// BL (carta_porte), número de declaración (correlativo_liquidacion) y número de ENP (numero_np).
-export const INMUTABLES = new Set<string>(["carta_porte", "correlativo_liquidacion", "numero_np"])
+// BL (carta_porte) y número de declaración (correlativo_liquidacion).
+// El número de ENP (numero_np) SÍ es editable siempre (incluso con la operación
+// cerrada), para permitir correcciones posteriores; ver editarDatosGestion.
+export const INMUTABLES = new Set<string>(["carta_porte", "correlativo_liquidacion"])
 
 // Etapas cuyos campos se pueden diligenciar SIEMPRE (aunque el proceso ya avanzó):
 // el intake (Paso 1) y la ENP (el número NP puede quedar pendiente y llenarse luego).
