@@ -12,14 +12,26 @@ export const dynamic = "force-dynamic"
 
 export default async function EmpresasPage() {
   const sb = getSupabase()
-  const [{ data }, { data: us }, { data: operadores }, { data: asig }] = await Promise.all([
+  const [{ data }, { data: us }, { data: operadores }, { data: asig }, { data: caUsers }] = await Promise.all([
     sb.from("empresas").select("*").order("nombre"),
     sb.from("usuarios").select("empresa_id"),
     sb.from("usuarios").select("id, nombre").eq("rol", "operador").eq("activo", true).order("nombre"),
     sb.from("operador_empresas").select("usuario_id, empresa_id"),
+    // Empresas que actúan como cliente aduanero = las que tienen al menos un
+    // usuario con rol cliente_aduanero.
+    sb.from("usuarios").select("empresa_id").eq("rol", "cliente_aduanero").eq("activo", true),
   ])
   const empresas = (data as Empresa[]) ?? []
   const listaOperadores = (operadores as { id: string; nombre: string }[]) ?? []
+
+  // IDs de empresas que son clientes aduaneros (para el selector y para excluirlas
+  // de poder tener a su vez un cliente aduanero por encima — no se anida).
+  const idsClienteAduanero = new Set(
+    ((caUsers as { empresa_id: string | null }[]) ?? []).map((u) => u.empresa_id).filter(Boolean) as string[],
+  )
+  const clientesAduaneros = empresas
+    .filter((e) => idsClienteAduanero.has(e.id))
+    .map((e) => ({ id: e.id, nombre: e.nombre }))
 
   // Conteo de usuarios cliente por empresa.
   const conteo: Record<string, number> = {}
@@ -41,12 +53,12 @@ export default async function EmpresasPage() {
           descripcion="Alta y edición de empresas importadoras/exportadoras."
           acciones={
             <Modal title="Nueva empresa" trigger={<Button><Plus /> Nueva empresa</Button>}>
-              <EmpresaForm operadores={listaOperadores} />
+              <EmpresaForm operadores={listaOperadores} clientesAduaneros={clientesAduaneros} />
             </Modal>
           }
         />
 
-        <EmpresasLista empresas={empresas} conteo={conteo} operadores={listaOperadores} asignados={asignados} />
+        <EmpresasLista empresas={empresas} conteo={conteo} operadores={listaOperadores} asignados={asignados} clientesAduaneros={clientesAduaneros} />
       </div>
     </PortalShell>
   )

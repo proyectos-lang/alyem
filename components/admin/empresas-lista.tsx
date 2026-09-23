@@ -29,12 +29,19 @@ export function EmpresasLista({
   conteo,
   operadores,
   asignados,
+  clientesAduaneros = [],
 }: {
   empresas: Empresa[]
   conteo: Record<string, number>
   operadores: { id: string; nombre: string }[]
   asignados: Record<string, string[]>
+  clientesAduaneros?: { id: string; nombre: string }[]
 }) {
+  // Nombre del cliente aduanero por id (para mostrarlo en la tabla).
+  const caNombre = useMemo(
+    () => new Map(clientesAduaneros.map((c) => [c.id, c.nombre])),
+    [clientesAduaneros],
+  )
   const [q, setQ] = useState("")
   const [estado, setEstado] = useState<EstadoFiltro>("todas")
   const [utohAlerta, setUtohAlerta] = useState(false)
@@ -141,6 +148,7 @@ export function EmpresasLista({
               <TableHead>Permiso UTOH</TableHead>
               <TableHead>Usuarios</TableHead>
               <TableHead>Operadores</TableHead>
+              <TableHead>Cliente aduanero</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Alta</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -177,6 +185,9 @@ export function EmpresasLista({
                   <TableCell className="text-muted-foreground">
                     {nOps === 0 ? "—" : `${nOps} operador${nOps === 1 ? "" : "es"}`}
                   </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {e.cliente_aduanero_id ? (caNombre.get(e.cliente_aduanero_id) ?? "—") : "—"}
+                  </TableCell>
                   <TableCell>
                     {e.activo ? <Badge variant="success">Activa</Badge> : <Badge variant="muted">Inactiva</Badge>}
                   </TableCell>
@@ -190,7 +201,7 @@ export function EmpresasLista({
                         </Button>
                       }
                     >
-                      <EmpresaForm empresa={e} operadores={operadores} asignados={asignados[e.id] ?? []} />
+                      <EmpresaForm empresa={e} operadores={operadores} asignados={asignados[e.id] ?? []} clientesAduaneros={clientesAduaneros} />
                     </Modal>
                   </TableCell>
                 </TableRow>
@@ -198,7 +209,7 @@ export function EmpresasLista({
             })}
             {filtradas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={13} className="py-8 text-center text-muted-foreground">
                   No hay empresas que coincidan.
                 </TableCell>
               </TableRow>

@@ -5,6 +5,7 @@ import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select } from "@/components/ui/select"
 import { useModalClose } from "@/components/ui/modal"
 import { UtohBadge } from "@/components/utoh-badge"
 import { guardarEmpresa, firmarSubidaUTOH, registrarUTOHDoc, quitarUTOHDoc, urlUTOHDoc } from "@/lib/actions/admin"
@@ -15,10 +16,12 @@ export function EmpresaForm({
   empresa,
   operadores = [],
   asignados = [],
+  clientesAduaneros = [],
 }: {
   empresa?: Empresa
   operadores?: { id: string; nombre: string }[]
   asignados?: string[]
+  clientesAduaneros?: { id: string; nombre: string }[]
 }) {
   const router = useRouter()
   const close = useModalClose()
@@ -143,6 +146,30 @@ export function EmpresaForm({
         />
         Empresa activa
       </label>
+
+      <div className="rounded-lg border border-border p-3">
+        <p className="text-sm font-medium">Cliente aduanero</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Si asignas un cliente aduanero, este verá y podrá gestionar las operaciones de esta empresa
+          (como si fuera un operador de su cartera).
+        </p>
+        {clientesAduaneros.filter((c) => c.id !== empresa?.id).length === 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            No hay clientes aduaneros registrados. Crea una empresa con un usuario de rol “cliente aduanero”.
+          </p>
+        ) : (
+          <div className="mt-3">
+            <Select name="cliente_aduanero_id" defaultValue={empresa?.cliente_aduanero_id ?? ""}>
+              <option value="">— Ninguno —</option>
+              {clientesAduaneros
+                .filter((c) => c.id !== empresa?.id)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+            </Select>
+          </div>
+        )}
+      </div>
 
       <div className="rounded-lg border border-border p-3">
         <p className="text-sm font-medium">Operadores asignados</p>

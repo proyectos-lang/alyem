@@ -34,6 +34,8 @@ export async function guardarEmpresa(form: FormData): Promise<{ id: string }> {
     telefono_1: (form.get("telefono_1") as string) || null,
     utoh_numero: (form.get("utoh_numero") as string) || null,
     utoh_vencimiento: (form.get("utoh_vencimiento") as string) || null,
+    // Cliente aduanero al que pertenece esta empresa (su subárbol). "" = ninguno.
+    cliente_aduanero_id: (form.get("cliente_aduanero_id") as string) || null,
   }
 
   let empresaId = id
