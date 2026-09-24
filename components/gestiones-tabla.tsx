@@ -7,19 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fechaCorta, haceCuanto } from "@/lib/format"
+import { labelTipoOperacion, infoTipoOperacion } from "@/lib/tipos-operacion"
 import type { GestionConEstado } from "@/lib/data/gestiones"
 
-// Etiqueta + color por tipo de operación (para distinguir importación/exportación).
-const TIPO_OP: Record<string, { label: string; clase: string }> = {
-  importacion: { label: "Importación", clase: "border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300" },
-  exportacion: { label: "Exportación", clase: "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300" },
-  transito: { label: "Tránsito", clase: "border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-300" },
-  duca_f: { label: "DUCA F", clase: "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300" },
-  transito_rapido: { label: "Tránsito Rápido", clase: "border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300" },
-}
 function TipoBadge({ tipo }: { tipo: string }) {
-  const t = TIPO_OP[tipo] ?? { label: tipo, clase: "border-border bg-muted text-muted-foreground" }
-  return <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${t.clase}`}>{t.label}</span>
+  const info = infoTipoOperacion(tipo)
+  const clase = info?.clase ?? "bg-muted text-muted-foreground"
+  return <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ${clase}`}>{labelTipoOperacion(tipo)}</span>
 }
 
 // Insignia de marca diferencial: identifica a Alyem que la operación pertenece a

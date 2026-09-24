@@ -1,18 +1,12 @@
 "use client"
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { TIPOS_OPERACION } from "@/lib/tipos-operacion"
 import { cn } from "@/lib/utils"
 
 // División por tipo de operación (importación / exportación / …). Controla el
 // parámetro `tipo` de la URL, que la página aplica con filtrarGestiones.
-const TABS = [
-  { value: "", label: "Todas" },
-  { value: "importacion", label: "Importación" },
-  { value: "exportacion", label: "Exportación" },
-  { value: "transito", label: "Tránsito" },
-  { value: "duca_f", label: "DUCA F" },
-  { value: "transito_rapido", label: "Tránsito Rápido" },
-]
+const TABS = [{ value: "", label: "Todas" }, ...TIPOS_OPERACION.map((t) => ({ value: t.value, label: t.label }))]
 
 export function TipoOperacionTabs() {
   const router = useRouter()

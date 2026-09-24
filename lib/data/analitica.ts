@@ -1,9 +1,9 @@
 import { getSupabase } from "../supabase/server"
 import { estadosActuales } from "./gestiones"
 import { listarCalificaciones, promediosDimensiones, type PromedioDimension } from "./satisfaccion"
+import { labelTipoOperacion } from "../tipos-operacion"
 
 const MES_CORTO = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-const TIPO_OP: Record<string, string> = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito", duca_f: "DUCA F", transito_rapido: "Tránsito Rápido" }
 const CANAL: Record<string, { nombre: string; color: string }> = {
   verde: { nombre: "Verde", color: "#22c55e" },
   amarillo: { nombre: "Amarillo", color: "#eab308" },
@@ -222,7 +222,7 @@ export async function analiticaGerencial(
     serieDiaria,
     serieMensual,
     serieAnual,
-    porTipo: [...tipoMap.entries()].map(([k, valor]) => ({ nombre: TIPO_OP[k] ?? k, valor })),
+    porTipo: [...tipoMap.entries()].map(([k, valor]) => ({ nombre: labelTipoOperacion(k), valor })),
     porRegimen: topN(regMap, (k) => regNombre.get(k) ?? "—"),
     porAduana: topN(aduMap, (k) => aduNombre.get(k) ?? "—"),
     porCliente: topN(cliMap, (k) => empNombre.get(k) ?? "—"),

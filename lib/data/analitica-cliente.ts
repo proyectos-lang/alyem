@@ -1,8 +1,8 @@
 import { getSupabase } from "../supabase/server"
 import { estadosActuales } from "./gestiones"
+import { labelTipoOperacion } from "../tipos-operacion"
 
 const MES_CORTO = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-const TIPO_OP: Record<string, string> = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito", duca_f: "DUCA F", transito_rapido: "Tránsito Rápido" }
 const CANAL: Record<string, { nombre: string; color: string }> = {
   verde: { nombre: "Verde", color: "#22c55e" },
   amarillo: { nombre: "Amarillo", color: "#eab308" },
@@ -115,7 +115,7 @@ export async function analiticaCliente(empresaId: string): Promise<AnaliticaClie
     },
     serieMensual,
     porEstado: [...estadoDist.entries()].map(([nombre, v]) => ({ nombre, valor: v.valor, color: v.color })),
-    porTipo: [...tipoMap.entries()].map(([k, valor]) => ({ nombre: TIPO_OP[k] ?? k, valor })),
+    porTipo: [...tipoMap.entries()].map(([k, valor]) => ({ nombre: labelTipoOperacion(k), valor })),
     porAduana: topN(aduMap, (k) => aduNombre.get(k) ?? "—"),
     porRegimen: topN(regMap, (k) => regNombre.get(k) ?? "—"),
     porCanal: [...canalMap.entries()].map(([k, valor]) => ({ nombre: CANAL[k]?.nombre ?? k, valor, color: CANAL[k]?.color ?? "#94a3b8" })),

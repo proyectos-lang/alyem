@@ -16,6 +16,7 @@ import { FacturasInput } from "@/components/facturas-input"
 import { firmarSubidaAdjunto, registrarAdjunto } from "@/lib/actions/adjuntos"
 import { getSupabaseBrowser } from "@/lib/supabase/client"
 import { crearClienteRapido } from "@/lib/actions/clientes"
+import { TIPOS_OPERACION } from "@/lib/tipos-operacion"
 import type { Aduana, Empresa, TipoDocumento } from "@/lib/types"
 import type { Regimen } from "@/lib/data/regimenes"
 
@@ -182,11 +183,9 @@ export function NuevaGestionForm({
               <div className="flex flex-col gap-1.5">
                 <Label>Tipo de operación</Label>
                 <Select name="tipo_operacion" defaultValue="importacion">
-                  <option value="importacion">Importación</option>
-                  <option value="exportacion">Exportación</option>
-                  <option value="transito">Tránsito (DUCA T)</option>
-                  <option value="duca_f">DUCA F</option>
-                  <option value="transito_rapido">Tránsito Rápido</option>
+                  {TIPOS_OPERACION.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">

@@ -2,14 +2,9 @@ import * as XLSX from "xlsx"
 import { usuarioActivoSeguro } from "@/lib/portal"
 import { listarGestiones } from "@/lib/data/gestiones"
 import { fecha } from "@/lib/format"
+import { labelTipoOperacion } from "@/lib/tipos-operacion"
 
 export const dynamic = "force-dynamic"
-
-const TIPO_LABEL: Record<string, string> = {
-  importacion: "Importación",
-  exportacion: "Exportación",
-  transito: "Tránsito",
-}
 
 // Exporta las operaciones visibles a un archivo Excel (.xlsx) con cada columna
 // en su propia celda (una hoja "Operaciones").
@@ -27,7 +22,7 @@ export async function GET(req: Request) {
   const filas = gestiones.map((g) => [
     g.referencia,
     g.empresa?.nombre ?? "",
-    TIPO_LABEL[g.tipo_operacion] ?? g.tipo_operacion,
+    labelTipoOperacion(g.tipo_operacion),
     g.estado?.nombre ?? "",
     g.aduana?.nombre ?? "",
     g.naviera ?? "",

@@ -2,6 +2,7 @@ import { getSupabase } from "../supabase/server"
 import { estadosActuales, type GestionConEstado } from "./gestiones"
 import { empresasVisibles } from "./asignaciones"
 import { fecha, fechaHora } from "../format"
+import { labelTipoOperacion } from "../tipos-operacion"
 import type { Usuario } from "../types"
 
 export interface FiltrosReporte {
@@ -131,7 +132,6 @@ export async function filasReporte(
 }
 
 const CANAL: Record<string, string> = { verde: "Verde", amarillo: "Amarillo", rojo: "Rojo" }
-const TIPO_OP: Record<string, string> = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito", duca_f: "DUCA F", transito_rapido: "Tránsito Rápido" }
 const tri = (v: boolean | null | undefined) => (v === true ? "Sí" : v === false ? "No" : "")
 
 // Valor de una columna para una fila (mapeo al modelo).
@@ -155,7 +155,7 @@ export function valorColumna(g: FilaReporte, key: string): string {
     case "contenedor": return g.contenedores ?? ""
     case "manifiesto": return tri(g.manifiesto_presentado)
     case "prefijo": return g.aduana?.codigo ?? ""
-    case "tipo_operacion": return TIPO_OP[g.tipo_operacion] ?? g.tipo_operacion
+    case "tipo_operacion": return labelTipoOperacion(g.tipo_operacion)
     case "regimen": return g.regimen_nombre ?? ""
     // Tracking del contenedor (última consulta a la naviera).
     case "tk_ubicacion": return g.tracking?.ubicacion ?? ""

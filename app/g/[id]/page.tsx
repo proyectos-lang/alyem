@@ -37,18 +37,12 @@ import { listarRegimenes } from "@/lib/data/regimenes"
 import { marcasClienteAduanero, empresasParaAgencia } from "@/lib/data/asignaciones"
 import { historialTracking } from "@/lib/actions/tracking"
 import { deducirNaviera } from "@/lib/tracking/jsoncargo"
+import { labelTipoOperacion } from "@/lib/tipos-operacion"
 import { puede, esAgencia, PERMISOS } from "@/lib/permisos"
 import { fecha } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
 
-const TIPO_LABEL: Record<string, string> = {
-  importacion: "Importación",
-  exportacion: "Exportación",
-  transito: "Tránsito",
-  duca_f: "DUCA F",
-  transito_rapido: "Tránsito Rápido",
-}
 
 export default async function DetalleGestion({ params }: { params: Promise<{ id: string }> }) {
   const usuario = await usuarioActivoSeguro()
@@ -107,7 +101,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
   return (
     <PortalShell>
       <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6">
-        {agencia && <Breadcrumb items={["Operaciones", TIPO_LABEL[g.tipo_operacion]]} destacado={g.referencia} />}
+        {agencia && <Breadcrumb items={["Operaciones", labelTipoOperacion(g.tipo_operacion)]} destacado={g.referencia} />}
         <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> Volver
         </Link>
@@ -141,7 +135,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                       <Landmark className="size-3.5" /> {g.aduana.nombre}
                     </span>
                   )}
-                  <span>{TIPO_LABEL[g.tipo_operacion]}</span>
+                  <span>{labelTipoOperacion(g.tipo_operacion)}</span>
                   <span>ETA {fecha(g.eta)}</span>
                 </p>
               </div>

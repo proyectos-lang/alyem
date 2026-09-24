@@ -6,11 +6,10 @@ import { getSupabase } from "@/lib/supabase/server"
 import { getConfig } from "@/lib/config"
 import { estadosActuales } from "@/lib/data/gestiones"
 import { fecha } from "@/lib/format"
+import { labelTipoOperacion } from "@/lib/tipos-operacion"
 import type { Evento, Gestion } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
-
-const TIPO = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito" } as const
 
 // Enlace público de seguimiento: SOLO timeline, sin datos internos, sin login.
 export default async function TrackPage({ params }: { params: Promise<{ token: string }> }) {
@@ -54,7 +53,7 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
             <EstadoChip nombre={estado?.nombre} color={estado?.color} />
           </div>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
-            <span>{TIPO[gestion.tipo_operacion]}</span>
+            <span>{labelTipoOperacion(gestion.tipo_operacion)}</span>
             {gestion.aduana && <span>{gestion.aduana.nombre}</span>}
             {gestion.naviera && <span>{gestion.naviera}</span>}
             <span>ETA {fecha(gestion.eta)}</span>

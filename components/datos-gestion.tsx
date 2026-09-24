@@ -1,7 +1,6 @@
 import { fecha, fechaHora } from "@/lib/format"
+import { labelTipoOperacion } from "@/lib/tipos-operacion"
 import type { GestionConEstado } from "@/lib/data/gestiones"
-
-const TIPO_OP = { importacion: "Importación", exportacion: "Exportación", transito: "Tránsito", duca_f: "DUCA F", transito_rapido: "Tránsito Rápido" }
 const FORMA_PAGO: Record<string, string> = {
   transferencia_pagada: "Transferencia pagada",
   transferencia_pendiente: "Transferencia pendiente",
@@ -32,7 +31,7 @@ export function DatosGestion({ g }: { g: GestionConEstado }) {
       <dl>
         <Dato label="Referencia" valor={g.referencia} />
         <Dato label="Número de BL / doc. transporte" valor={g.carta_porte} />
-        <Dato label="Tipo de operación" valor={TIPO_OP[g.tipo_operacion]} />
+        <Dato label="Tipo de operación" valor={labelTipoOperacion(g.tipo_operacion)} />
         <Dato label="Aduana de ingreso" valor={g.aduana ? `${g.aduana.nombre} (${g.aduana.codigo})` : null} />
         <Dato label="Régimen aduanero" valor={g.regimen?.nombre} />
         <Dato label="Naviera" valor={g.naviera} />
