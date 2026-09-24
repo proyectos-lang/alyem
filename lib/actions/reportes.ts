@@ -24,6 +24,7 @@ export async function guardarDefinicion(form: FormData) {
     hasta: (form.get("hasta") as string) || null,
     periodicidad: (form.get("periodicidad") as string) || "manual",
     filtros: {
+      operador: (form.get("operador") as string) || null,
       regimen: (form.get("regimen") as string) || null,
       tipo: (form.get("tipo") as string) || null,
       documento: (form.get("documento") as string) || null,

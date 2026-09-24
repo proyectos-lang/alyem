@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
+import { Combobox } from "@/components/ui/combobox"
 import { BookmarkPlus } from "lucide-react"
 import { toast } from "sonner"
 import { guardarDefinicion } from "@/lib/actions/reportes"
@@ -19,6 +20,7 @@ type Vista = {
   nombre: string
   cols: string[]
   empresaId: string
+  operadorId?: string
   desde: string
   hasta: string
   base: string
@@ -30,7 +32,15 @@ type Vista = {
 
 const STORAGE_KEY = "alyem:reportes:vistas"
 
-export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Empresa, "id" | "nombre">[]; regimenes?: Regimen[] }) {
+export function ReportBuilder({
+  empresas,
+  regimenes = [],
+  operadores = [],
+}: {
+  empresas?: Pick<Empresa, "id" | "nombre">[]
+  regimenes?: Regimen[]
+  operadores?: { id: string; nombre: string }[]
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -38,6 +48,7 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
   const initCols = (params.get("cols")?.split(",").filter(Boolean) ?? COLUMNAS_DEFAULT)
   const [cols, setCols] = useState<Set<string>>(new Set(initCols))
   const [empresaId, setEmpresaId] = useState(params.get("empresa") ?? "")
+  const [operadorId, setOperadorId] = useState(params.get("operador") ?? "")
   const [desde, setDesde] = useState(params.get("desde") ?? "")
   const [hasta, setHasta] = useState(params.get("hasta") ?? "")
   const [base, setBase] = useState(params.get("base") ?? "eta")
@@ -70,7 +81,7 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
   function guardarVista() {
     const nombre = window.prompt("Nombre de la vista")?.trim()
     if (!nombre) return
-    const vista: Vista = { nombre, cols: [...cols], empresaId, desde, hasta, base, regimen, tipo, documento, producto }
+    const vista: Vista = { nombre, cols: [...cols], empresaId, operadorId, desde, hasta, base, regimen, tipo, documento, producto }
     const next = [...vistas.filter((v) => v.nombre !== nombre), vista].sort((a, b) => a.nombre.localeCompare(b.nombre))
     persistir(next)
     setVistaSel(nombre)
@@ -82,6 +93,7 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
     if (!v) return
     setCols(new Set(v.cols))
     setEmpresaId(v.empresaId)
+    setOperadorId(v.operadorId ?? "")
     setDesde(v.desde)
     setHasta(v.hasta)
     setBase(v.base)
@@ -92,6 +104,7 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
     const p = new URLSearchParams()
     p.set("cols", v.cols.join(","))
     if (empresas && v.empresaId) p.set("empresa", v.empresaId)
+    if (operadores.length && v.operadorId) p.set("operador", v.operadorId)
     if (v.desde) p.set("desde", v.desde)
     if (v.hasta) p.set("hasta", v.hasta)
     p.set("base", v.base)
@@ -112,6 +125,7 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
     const p = new URLSearchParams()
     p.set("cols", [...cols].join(","))
     if (empresas && empresaId) p.set("empresa", empresaId)
+    if (operadores.length && operadorId) p.set("operador", operadorId)
     if (desde) p.set("desde", desde)
     if (hasta) p.set("hasta", hasta)
     p.set("base", base)
@@ -120,7 +134,7 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
     if (documento.trim()) p.set("documento", documento.trim())
     if (producto.trim()) p.set("producto", producto.trim())
     return p.toString()
-  }, [cols, empresaId, desde, hasta, base, regimen, tipo, documento, producto, empresas])
+  }, [cols, empresaId, operadorId, desde, hasta, base, regimen, tipo, documento, producto, empresas, operadores])
 
   function toggle(key: string) {
     setCols((prev) => {
@@ -162,12 +176,25 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
           {empresas && (
             <div className="flex flex-col gap-1.5">
               <Label>Cliente</Label>
-              <Select value={empresaId} onChange={(e) => setEmpresaId(e.target.value)}>
-                <option value="">Todos</option>
-                {empresas.map((e) => (
-                  <option key={e.id} value={e.id}>{e.nombre}</option>
-                ))}
-              </Select>
+              <Combobox
+                options={empresas.map((e) => ({ value: e.id, label: e.nombre }))}
+                value={empresaId || null}
+                onChange={(v) => setEmpresaId(v ?? "")}
+                placeholder="Todos"
+                buscarPlaceholder="Buscar cliente…"
+              />
+            </div>
+          )}
+          {operadores.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Operador</Label>
+              <Combobox
+                options={operadores.map((o) => ({ value: o.id, label: o.nombre }))}
+                value={operadorId || null}
+                onChange={(v) => setOperadorId(v ?? "")}
+                placeholder="Todos"
+                buscarPlaceholder="Buscar operador…"
+              />
             </div>
           )}
           <div className="flex flex-col gap-1.5">
@@ -199,12 +226,13 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
           {regimenes.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <Label>Régimen aduanero</Label>
-              <Select value={regimen} onChange={(e) => setRegimen(e.target.value)}>
-                <option value="">Todos</option>
-                {regimenes.map((r) => (
-                  <option key={r.id} value={r.id}>{r.nombre}</option>
-                ))}
-              </Select>
+              <Combobox
+                options={regimenes.map((r) => ({ value: r.id, label: r.nombre }))}
+                value={regimen || null}
+                onChange={(v) => setRegimen(v ?? "")}
+                placeholder="Todos"
+                buscarPlaceholder="Buscar régimen…"
+              />
             </div>
           )}
           <div className="flex flex-col gap-1.5">
@@ -247,6 +275,7 @@ export function ReportBuilder({ empresas, regimenes = [] }: { empresas?: Pick<Em
                 fd.set("nombre", nombre)
                 fd.set("cols", [...cols].join(","))
                 if (empresaId) fd.set("empresa", empresaId)
+                if (operadorId) fd.set("operador", operadorId)
                 if (desde) fd.set("desde", desde)
                 if (hasta) fd.set("hasta", hasta)
                 fd.set("base", base)

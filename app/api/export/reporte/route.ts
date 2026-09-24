@@ -18,6 +18,7 @@ export async function GET(req: Request) {
 
   const filas = await filasReporte(usuario, {
     empresaId: sp.get("empresa") ?? undefined,
+    operadorId: sp.get("operador") ?? undefined,
     desde: sp.get("desde") ?? undefined,
     hasta: sp.get("hasta") ?? undefined,
     base: (sp.get("base") as "eta" | "solicitud") ?? "eta",

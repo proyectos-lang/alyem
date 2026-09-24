@@ -6,6 +6,7 @@ import type { Usuario } from "../types"
 
 export interface FiltrosReporte {
   empresaId?: string
+  operadorId?: string // operador_id (agencia)
   desde?: string
   hasta?: string
   base?: "eta" | "solicitud" // campo sobre el que se filtra el rango
@@ -33,7 +34,7 @@ export interface FilaReporte extends GestionConEstado {
 }
 
 const SEL =
-  "*, empresa:empresas(id, nombre), aduana:aduanas(id, nombre, codigo)"
+  "*, empresa:empresas(id, nombre), operador:usuarios!gestiones_operador_id_fkey(id, nombre), aduana:aduanas(id, nombre, codigo)"
 
 // Filas para el reporte, respetando el alcance por empresa (cliente / operador).
 export async function filasReporte(
@@ -56,6 +57,8 @@ export async function filasReporte(
   }
   // Filtro opcional por empresa (agencia), respetando el alcance.
   if (f.empresaId && (!vis || vis.includes(f.empresaId))) q = q.eq("empresa_id", f.empresaId)
+  // Filtro opcional por operador (agencia).
+  if (f.operadorId) q = q.eq("operador_id", f.operadorId)
 
   const campo = f.base === "solicitud" ? "fecha_solicitud" : "eta"
   if (f.desde) q = q.gte(campo, f.desde)
