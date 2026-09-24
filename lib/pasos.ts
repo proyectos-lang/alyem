@@ -260,13 +260,85 @@ export function condicionCumplida(gestion: unknown, c: CampoPaso): boolean {
   return valorCampo(gestion, c.condicion.campo) === c.condicion.igual
 }
 
+// ---------------------------------------------------------------------------
+// Motor de flujo por tipo de operación.
+// Cada tipo declara SU secuencia de estados (por nombre de estados_catalogo).
+// Los pasos que no están en la secuencia de un tipo no aplican: no se muestran
+// ni bloquean el avance. Los overrides de campos por tipo (quitar/opcional/
+// reemplazar/agregar) se declaran en CAMPOS_POR_TIPO.
+// ---------------------------------------------------------------------------
+
+// Secuencia base = los 14 estados actuales, en orden.
+export const SECUENCIA_BASE: string[] = PASOS.map((p) => p.nombre)
+
+// Secuencia de estados por tipo. Un tipo sin entrada usa SECUENCIA_BASE.
+// (Fase 1: solo Tránsitos difieren — omiten Envío/Pago del boletín.)
+export const SECUENCIA_POR_TIPO: Record<string, string[]> = {
+  transito: SECUENCIA_BASE.filter((n) => n !== "Envío del boletín" && n !== "Pago del boletín"),
+  transito_rapido: SECUENCIA_BASE.filter((n) => n !== "Envío del boletín" && n !== "Pago del boletín"),
+}
+
+export interface OverrideCampos {
+  quitar?: string[] // campos que no se muestran para este tipo
+  opcionales?: string[] // campos que se muestran pero no bloquean
+  reemplazar?: { de: string; por: CampoPaso }[] // sustituir un campo por otro (eta→etd, etc.)
+  agregar?: CampoPaso[] // campos extra para este tipo
+}
+// Overrides de campos por (tipo → nombre de paso). Vacío en Fase 1; se llena en Fase 4.
+export const CAMPOS_POR_TIPO: Record<string, Record<string, OverrideCampos>> = {}
+
+// Secuencia de estados del flujo de un tipo (nombres). Fallback a la base.
+export function secuenciaDeTipo(tipo: string | null | undefined): string[] {
+  return (tipo && SECUENCIA_POR_TIPO[tipo]) || SECUENCIA_BASE
+}
+
+// ¿El paso (por nombre de estado) forma parte del flujo de este tipo?
+export function pasoAplicaATipo(tipo: string | null | undefined, nombrePaso: string): boolean {
+  return secuenciaDeTipo(tipo).includes(nombrePaso)
+}
+
+// Campos efectivos de un paso para un tipo (con overrides quitar/reemplazar/agregar).
+export function camposDePaso(tipo: string | null | undefined, nombrePaso: string): CampoPaso[] {
+  const paso = pasoPorNombre(nombrePaso)
+  if (!paso) return []
+  const ov = tipo ? CAMPOS_POR_TIPO[tipo]?.[nombrePaso] : undefined
+  if (!ov) return paso.campos
+  let campos = paso.campos
+  if (ov.quitar?.length) campos = campos.filter((c) => !ov.quitar!.includes(c.name))
+  if (ov.reemplazar?.length) {
+    campos = campos.map((c) => {
+      const r = ov.reemplazar!.find((x) => x.de === c.name)
+      return r ? r.por : c
+    })
+  }
+  if (ov.agregar?.length) campos = [...campos, ...ov.agregar]
+  return campos
+}
+
+// ¿Un campo es opcional para avanzar en este tipo? (global u override por tipo).
+export function campoOpcionalEnTipo(tipo: string | null | undefined, nombrePaso: string, campo: string): boolean {
+  if (OPCIONALES_AVANCE.has(campo)) return true
+  const ov = tipo ? CAMPOS_POR_TIPO[tipo]?.[nombrePaso] : undefined
+  return !!ov?.opcionales?.includes(campo)
+}
+
 // Campos requeridos de una etapa que aún están vacíos. Si la etapa tiene un
 // tristate `*_aplica` en `false`, la etapa no aplica y no se exige nada más.
-export function faltantesParaAvanzar(gestion: unknown, nombreEtapa: string | null | undefined): CampoPaso[] {
+// El tipo de operación decide qué campos aplican (overrides) y si el paso
+// siquiera forma parte del flujo del tipo (si no, no bloquea nada).
+export function faltantesParaAvanzar(
+  gestion: unknown,
+  nombreEtapa: string | null | undefined,
+  tipo?: string | null,
+): CampoPaso[] {
   const paso = pasoPorNombre(nombreEtapa)
   if (!paso) return []
+  // Si el paso no forma parte del flujo de este tipo, no exige nada.
+  if (nombreEtapa && tipo !== undefined && !pasoAplicaATipo(tipo, nombreEtapa)) return []
 
-  const aplica = paso.campos.find((c) => c.name.endsWith("_aplica"))
+  const campos = tipo !== undefined ? camposDePaso(tipo, paso.nombre) : paso.campos
+
+  const aplica = campos.find((c) => c.name.endsWith("_aplica"))
   if (aplica) {
     const v = valorCampo(gestion, aplica.name)
     if (v === false) return [] // la etapa no aplica
@@ -274,8 +346,8 @@ export function faltantesParaAvanzar(gestion: unknown, nombreEtapa: string | nul
     // v === true → se exige el resto (sigue al flujo normal)
   }
 
-  const requeridos = paso.campos.filter(
-    (c) => !OPCIONALES_AVANCE.has(c.name) && condicionCumplida(gestion, c),
+  const requeridos = campos.filter(
+    (c) => !campoOpcionalEnTipo(tipo, paso.nombre, c.name) && condicionCumplida(gestion, c),
   )
   return requeridos.filter((c) => !tieneValor(gestion, c.name))
 }

@@ -189,7 +189,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
 
         {/* Stepper de los 13 pasos */}
         <div className="mt-4">
-          <StepperTrazabilidad estados={estados} eventos={eventos} estadoActualId={g.estado?.estado_id} />
+          <StepperTrazabilidad estados={estados} eventos={eventos} estadoActualId={g.estado?.estado_id} tipoOperacion={g.tipo_operacion} />
         </div>
 
         {/* Satisfacción */}
@@ -246,6 +246,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                 puedeEditar={puede(usuario, PERMISOS.GESTION_EDITAR)}
                 puedeAvanzar={agencia && puede(usuario, PERMISOS.EVENTO_REGISTRAR)}
                 esAdmin={usuario.rol === "admin"}
+                tipoOperacion={g.tipo_operacion}
               />
             </TabsContent>
           )}

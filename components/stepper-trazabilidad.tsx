@@ -2,23 +2,28 @@ import { Check } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { fecha as fmtFecha, fechaHora } from "@/lib/format"
 import type { EstadoCatalogo, Evento } from "@/lib/types"
+import { secuenciaDeTipo } from "@/lib/pasos"
 import { cn } from "@/lib/utils"
 
-// Stepper horizontal de trazabilidad. Renderiza las etapas del catálogo (tal cual,
-// normal+final en orden) y deriva completada/en curso/pendiente del estado actual
-// y los eventos. Verde ✓ completada, ámbar la actual, gris pendiente.
+// Stepper horizontal de trazabilidad. Renderiza las etapas del FLUJO del tipo de
+// operación (secuencia por tipo), derivando completada/en curso/pendiente del
+// estado actual y los eventos. Verde ✓ completada, ámbar la actual, gris pendiente.
 export function StepperTrazabilidad({
   estados,
   eventos,
   estadoActualId,
+  tipoOperacion,
 }: {
   estados: EstadoCatalogo[]
   eventos: Evento[]
   estadoActualId: string | null | undefined
+  tipoOperacion?: string | null
 }) {
-  const etapas = estados
-    .filter((e) => e.tipo === "normal" || e.tipo === "final")
-    .sort((a, b) => a.orden - b.orden)
+  // Etapas del flujo del tipo (por nombre), mapeadas a las filas del catálogo.
+  const porNombre = new Map(estados.filter((e) => e.tipo === "normal" || e.tipo === "final").map((e) => [e.nombre, e]))
+  const etapas = secuenciaDeTipo(tipoOperacion)
+    .map((n) => porNombre.get(n))
+    .filter(Boolean) as EstadoCatalogo[]
 
   // Fecha del último evento por estado.
   const fechaPorEstado = new Map<string, string>()

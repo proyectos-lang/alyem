@@ -6,8 +6,9 @@ import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
 import { getConfig } from "../config"
 import { empresasVisibles } from "../data/asignaciones"
-import { faltantesParaAvanzar, etapaIndexDeCampo, etapaIndexPorNombre, indiceEtapaSiempreEditable, INMUTABLES } from "../pasos"
+import { faltantesParaAvanzar, etapaIndexDeCampo, etapaIndexPorNombre, indiceEtapaSiempreEditable, INMUTABLES, secuenciaDeTipo } from "../pasos"
 import { notificarAgencia, notificarEmpresa } from "./notificaciones"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 async function estadoIdPorNombre(patron: string): Promise<string | null> {
   const sb = getSupabase()
@@ -19,6 +20,28 @@ async function estadoIdPorNombre(patron: string): Promise<string | null> {
     .limit(1)
     .maybeSingle()
   return (data?.id as string) ?? null
+}
+
+interface EstadoFlujo { id: string; nombre: string; tipo: string; notifica_cliente: boolean }
+
+// Flujo efectivo de una operación = la secuencia de estados de su tipo, mapeada a
+// las filas del catálogo por nombre. Reemplaza al recorrido por `orden` global,
+// para que cada tipo tenga su propia secuencia (y los pasos que no aplican se
+// salten). Si el tipo no está mapeado, usa la secuencia base (todos los estados
+// normal/final por orden).
+async function flujoEfectivo(sb: SupabaseClient, tipo: string | null): Promise<EstadoFlujo[]> {
+  const { data } = await sb
+    .from("estados_catalogo")
+    .select("id, nombre, orden, tipo, notifica_cliente")
+    .eq("activo", true)
+    .in("tipo", ["normal", "final"])
+    .order("orden")
+  const filas = (data ?? []) as (EstadoFlujo & { orden: number })[]
+  const porNombre = new Map(filas.map((e) => [e.nombre, e]))
+  // Secuencia del tipo → filas del catálogo (en el orden de la secuencia).
+  const seq = secuenciaDeTipo(tipo)
+  const flujo = seq.map((n) => porNombre.get(n)).filter(Boolean) as EstadoFlujo[]
+  return flujo.length > 0 ? flujo : filas
 }
 
 async function siguienteReferencia(): Promise<string> {
@@ -264,13 +287,11 @@ export async function avanzarEtapa(gestionId: string) {
   exigir(usuario, PERMISOS.EVENTO_REGISTRAR)
   const sb = getSupabase()
 
-  const { data: estadosData } = await sb
-    .from("estados_catalogo")
-    .select("id, nombre, orden, tipo, notifica_cliente")
-    .eq("activo", true)
-    .in("tipo", ["normal", "final"])
-    .order("orden")
-  const flujo = estadosData ?? []
+  // Tipo de la operación: define su secuencia de estados (flujo efectivo).
+  const { data: gTipo } = await sb.from("gestiones").select("tipo_operacion").eq("id", gestionId).maybeSingle()
+  const tipoOp = (gTipo as { tipo_operacion?: string } | null)?.tipo_operacion ?? null
+
+  const flujo = await flujoEfectivo(sb, tipoOp)
   if (flujo.length === 0) throw new Error("No hay estados configurados.")
 
   const { data: actual } = await sb.from("v_gestion_estado_actual").select("estado_id").eq("gestion_id", gestionId).maybeSingle()
@@ -282,7 +303,7 @@ export async function avanzarEtapa(gestionId: string) {
   // se informa cuál. Aplica a todos (el admin puede saltar con "Registrar evento").
   if (idx >= 0) {
     const { data: g } = await sb.from("gestiones").select("*").eq("id", gestionId).maybeSingle()
-    const faltan = faltantesParaAvanzar(g, flujo[idx].nombre)
+    const faltan = faltantesParaAvanzar(g, flujo[idx].nombre, tipoOp)
     if (faltan.length > 0) {
       throw new Error(`Antes de avanzar, diligencia en la pestaña: ${faltan.map((c) => c.label).join(", ")}.`)
     }
@@ -312,13 +333,10 @@ export async function devolverEtapa(gestionId: string, motivo?: string) {
   }
   const sb = getSupabase()
 
-  const { data: estadosData } = await sb
-    .from("estados_catalogo")
-    .select("id, nombre, orden, tipo")
-    .eq("activo", true)
-    .in("tipo", ["normal", "final"])
-    .order("orden")
-  const flujo = estadosData ?? []
+  // Flujo efectivo según el tipo de la operación (misma secuencia que el avance).
+  const { data: gTipo } = await sb.from("gestiones").select("tipo_operacion").eq("id", gestionId).maybeSingle()
+  const tipoOp = (gTipo as { tipo_operacion?: string } | null)?.tipo_operacion ?? null
+  const flujo = await flujoEfectivo(sb, tipoOp)
   if (flujo.length === 0) throw new Error("No hay estados configurados.")
 
   const { data: actual } = await sb.from("v_gestion_estado_actual").select("estado_id").eq("gestion_id", gestionId).maybeSingle()

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/modal"
 import { PasoForm } from "@/components/paso-form"
 import { AvanzarEtapaPaso } from "@/components/avanzar-etapa-paso"
-import { PASOS, faltantesParaAvanzar, condicionCumplida, etapaSiempreEditable, type CampoPaso } from "@/lib/pasos"
+import { PASOS, pasoPorNombre, secuenciaDeTipo, camposDePaso, faltantesParaAvanzar, condicionCumplida, etapaSiempreEditable, type CampoPaso } from "@/lib/pasos"
 import { fecha, fechaHora } from "@/lib/format"
 import type { Aduana, Documento, EstadoCatalogo, Gestion } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -46,6 +46,7 @@ export function ProcesoPanel({
   puedeEditar,
   puedeAvanzar = false,
   esAdmin = false,
+  tipoOperacion,
 }: {
   gestion: Gestion
   estados: EstadoCatalogo[]
@@ -55,8 +56,14 @@ export function ProcesoPanel({
   puedeEditar: boolean
   puedeAvanzar?: boolean
   esAdmin?: boolean
+  tipoOperacion?: string | null
 }) {
-  const flujo = estados.filter((e) => e.tipo === "normal" || e.tipo === "final").sort((a, b) => a.orden - b.orden)
+  const tipo = tipoOperacion ?? gestion.tipo_operacion ?? null
+  // Flujo = secuencia de estados del tipo, mapeada a las filas del catálogo.
+  const porNombre = new Map(estados.filter((e) => e.tipo === "normal" || e.tipo === "final").map((e) => [e.nombre, e]))
+  const flujo = secuenciaDeTipo(tipo).map((n) => porNombre.get(n)).filter(Boolean) as EstadoCatalogo[]
+  // Pasos a renderizar = los del flujo del tipo (config de campos de PASOS por nombre).
+  const pasosDelTipo = secuenciaDeTipo(tipo).map((n) => pasoPorNombre(n)).filter(Boolean) as typeof PASOS
   const currentIndex = flujo.findIndex((e) => e.nombre === estadoActualNombre)
   const haySiguiente = currentIndex >= 0 && currentIndex < flujo.length - 1
   // Operación cerrada o finalizada: nadie edita ningún valor (ni un administrador).
@@ -66,7 +73,9 @@ export function ProcesoPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      {PASOS.map((paso, i) => {
+      {pasosDelTipo.map((pasoBase, i) => {
+        // Campos efectivos del paso para este tipo (overrides quitar/reemplazar/agregar).
+        const paso = { ...pasoBase, campos: camposDePaso(tipo, pasoBase.nombre) }
         const idxEnFlujo = flujo.findIndex((e) => e.nombre === paso.nombre)
         const completado = currentIndex >= 0 && idxEnFlujo >= 0 && idxEnFlujo < currentIndex
         const enCurso = idxEnFlujo === currentIndex
@@ -75,7 +84,7 @@ export function ProcesoPanel({
           : []
         const diligenciado = pasoDiligenciado(gestion, paso.campos)
         // Etapa "completa": tiene campos y no le falta ninguno requerido por diligenciar.
-        const completoEtapa = paso.campos.length > 0 && faltantesParaAvanzar(gestion, paso.nombre).length === 0
+        const completoEtapa = paso.campos.length > 0 && faltantesParaAvanzar(gestion, paso.nombre, tipo).length === 0
         // Etapa actual editable: se muestra el formulario en línea con botón "Guardar"
         // (permite guardar parcialmente sin avanzar). Las demás usan el modal.
         const editarInline = enCurso && editable && paso.campos.length > 0
@@ -184,7 +193,7 @@ export function ProcesoPanel({
               {enCurso && haySiguiente && (
                 <AvanzarEtapaPaso
                   gestionId={gestion.id}
-                  faltantes={faltantesParaAvanzar(gestion, paso.nombre).map((c) => ({ name: c.name, label: c.label }))}
+                  faltantes={faltantesParaAvanzar(gestion, paso.nombre, tipo).map((c) => ({ name: c.name, label: c.label }))}
                   puedeAvanzar={puedeAvanzar}
                 />
               )}
