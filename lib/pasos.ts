@@ -190,6 +190,56 @@ export const PASOS: Paso[] = [
     descripcion: "El cliente confirma la recepción y califica el servicio.",
     campos: [],
   },
+  // --- Estados variantes por tipo de operación (Fase 4). Solo participan en el
+  // flujo de los tipos que los usan (ver SECUENCIA_POR_TIPO). ---
+  {
+    nombre: "Despacho de la carga",
+    responsable: "alyem",
+    descripcion: "Despacho de la carga (variante del gatepass para DUCA F Importación).",
+    campos: [
+      { name: "gatepass_entregado", label: "Carga despachada", tipo: "select", opciones: [
+        { value: "si", label: "Sí" },
+        { value: "no", label: "No" },
+        { value: "na", label: "N/A" },
+      ] },
+      { name: "gatepass_fecha_hora", label: "Fecha y hora del despacho", tipo: "datetime" },
+      { name: "gatepass_observacion", label: "Observaciones", tipo: "textarea" },
+    ],
+  },
+  {
+    nombre: "Plazo de vencimiento",
+    responsable: "alyem",
+    descripcion: "Fecha de vencimiento de la exportación temporal. Se alerta 2 semanas antes.",
+    campos: [{ name: "fecha_vencimiento", label: "Fecha de vencimiento", tipo: "date" }],
+  },
+  {
+    nombre: "Confirmación de despacho de frontera",
+    responsable: "alyem",
+    descripcion: "Confirmación del despacho de la carga en la frontera.",
+    campos: [
+      { name: "frontera_despachado", label: "¿Despachado en frontera?", tipo: "tristate" },
+      { name: "frontera_fecha", label: "Fecha de despacho de frontera", tipo: "date" },
+      { name: "frontera_observacion", label: "Observaciones", tipo: "textarea" },
+    ],
+  },
+  {
+    nombre: "Número de FYDUCA",
+    responsable: "alyem",
+    descripcion: "Se registra el número de FYDUCA (variante de la liquidación).",
+    campos: [{ name: "numero_fyduca", label: "Número de FYDUCA", tipo: "text" }],
+  },
+  {
+    nombre: "Pago de FYDUCA",
+    responsable: "cliente",
+    descripcion: "Confirmación del pago de la FYDUCA.",
+    campos: [{ name: "boletin_pagado", label: "FYDUCA pagada", tipo: "tristate" }],
+  },
+  {
+    nombre: "Número de mandamiento",
+    responsable: "alyem",
+    descripcion: "Número de mandamiento (solo si aplica), tras el pago del boletín.",
+    campos: [{ name: "numero_mandamiento", label: "Número de mandamiento", tipo: "text" }],
+  },
 ]
 
 export function pasoPorNombre(nombre: string | null | undefined): Paso | undefined {
@@ -228,6 +278,13 @@ export const OPCIONALES_AVANCE = new Set<string>([
   "gatepass_fecha_hora",
   // NP (ENP): opcional para avanzar; puede quedar pendiente y diligenciarse después.
   "numero_np",
+  // Flujos por tipo: permisos de exportación definitiva (opcionales), número de
+  // mandamiento (solo si aplica) y observaciones de frontera.
+  "permiso_sepa",
+  "permiso_arsa",
+  "permiso_banco_central",
+  "numero_mandamiento",
+  "frontera_observacion",
 ])
 
 // Identificadores oficiales que NO se pueden editar una vez registrados (por nadie):
@@ -268,14 +325,87 @@ export function condicionCumplida(gestion: unknown, c: CampoPaso): boolean {
 // reemplazar/agregar) se declaran en CAMPOS_POR_TIPO.
 // ---------------------------------------------------------------------------
 
-// Secuencia base = los 14 estados actuales, en orden.
-export const SECUENCIA_BASE: string[] = PASOS.map((p) => p.nombre)
+// Secuencia base = los 14 estados del flujo estándar (importación), en orden.
+// NO incluye los estados variantes por tipo (Despacho de la carga, Plazo de
+// vencimiento, etc.), que solo participan en los tipos que los declaran.
+export const SECUENCIA_BASE: string[] = [
+  "Notificación del embarque",
+  "Revisión de documentación",
+  "Documentos faltantes / ENP",
+  "Envío a aforo y digital",
+  "Gestión con la naviera",
+  "Liquidación de la declaración",
+  "Envío del boletín",
+  "Pago del boletín",
+  "Selectivo",
+  "Revisión",
+  "Levante de aduana",
+  "Entrega del gatepass",
+  "Facturación del servicio",
+  "Cierre del ciclo",
+]
+
+const quitar = (arr: string[], ...quita: string[]) => arr.filter((n) => !quita.includes(n))
+// Reemplaza un estado por otro en la secuencia, preservando la posición.
+const reemplazar = (arr: string[], de: string, por: string) => arr.map((n) => (n === de ? por : n))
+// Inserta un estado justo después de otro.
+const insertarDespues = (arr: string[], despuesDe: string, nuevo: string) => {
+  const i = arr.indexOf(despuesDe)
+  if (i < 0) return [...arr, nuevo]
+  return [...arr.slice(0, i + 1), nuevo, ...arr.slice(i + 1)]
+}
 
 // Secuencia de estados por tipo. Un tipo sin entrada usa SECUENCIA_BASE.
-// (Fase 1: solo Tránsitos difieren — omiten Envío/Pago del boletín.)
 export const SECUENCIA_POR_TIPO: Record<string, string[]> = {
-  transito: SECUENCIA_BASE.filter((n) => n !== "Envío del boletín" && n !== "Pago del boletín"),
-  transito_rapido: SECUENCIA_BASE.filter((n) => n !== "Envío del boletín" && n !== "Pago del boletín"),
+  // Tránsitos: todo menos Envío/Pago del boletín.
+  transito: quitar(SECUENCIA_BASE, "Envío del boletín", "Pago del boletín"),
+  transito_rapido: quitar(SECUENCIA_BASE, "Envío del boletín", "Pago del boletín"),
+
+  // DUCA F Importación: sin ENP, Aforo, Gestión naviera; gatepass → Despacho de la carga.
+  duca_f_importacion: reemplazar(
+    quitar(SECUENCIA_BASE, "Documentos faltantes / ENP", "Envío a aforo y digital", "Gestión con la naviera"),
+    "Entrega del gatepass", "Despacho de la carga",
+  ),
+
+  // Exportación temporal: sin Gestión naviera; Envío del boletín → Plazo de
+  // vencimiento; sin Pago del boletín; gatepass → Confirmación de despacho de frontera.
+  exportacion_temporal: reemplazar(
+    reemplazar(
+      quitar(SECUENCIA_BASE, "Gestión con la naviera", "Pago del boletín"),
+      "Envío del boletín", "Plazo de vencimiento",
+    ),
+    "Entrega del gatepass", "Confirmación de despacho de frontera",
+  ),
+
+  // DUCA F Exportación: sin ENP, Gestión naviera; +Número de mandamiento tras Pago
+  // del boletín; gatepass → Confirmación de despacho de frontera.
+  duca_f_exportacion: reemplazar(
+    insertarDespues(
+      quitar(SECUENCIA_BASE, "Documentos faltantes / ENP", "Gestión con la naviera"),
+      "Pago del boletín", "Número de mandamiento",
+    ),
+    "Entrega del gatepass", "Confirmación de despacho de frontera",
+  ),
+
+  // FYDUCA: sin ENP, Aforo, Gestión naviera; Liquidación → Número de FYDUCA; sin
+  // Envío del boletín; Pago del boletín → Pago de FYDUCA; sin Selectivo, Revisión,
+  // Levante, Gatepass. Quedan: Notificación, Revisión doc, Nº FYDUCA, Pago FYDUCA,
+  // Facturación, Cierre.
+  fyduca: [
+    "Notificación del embarque",
+    "Revisión de documentación",
+    "Número de FYDUCA",
+    "Pago de FYDUCA",
+    "Facturación del servicio",
+    "Cierre del ciclo",
+  ],
+
+  // Exportación definitiva: sin ENP, Gestión naviera, Envío/Pago del boletín;
+  // gatepass → Confirmación de despacho de frontera.
+  exportacion_definitiva: reemplazar(
+    quitar(SECUENCIA_BASE, "Documentos faltantes / ENP", "Gestión con la naviera", "Envío del boletín", "Pago del boletín"),
+    "Entrega del gatepass", "Confirmación de despacho de frontera",
+  ),
 }
 
 export interface OverrideCampos {
@@ -284,8 +414,49 @@ export interface OverrideCampos {
   reemplazar?: { de: string; por: CampoPaso }[] // sustituir un campo por otro (eta→etd, etc.)
   agregar?: CampoPaso[] // campos extra para este tipo
 }
-// Overrides de campos por (tipo → nombre de paso). Vacío en Fase 1; se llena en Fase 4.
-export const CAMPOS_POR_TIPO: Record<string, Record<string, OverrideCampos>> = {}
+// Campos reutilizables para overrides.
+const CAMPO_ETD: CampoPaso = { name: "etd", label: "ETD", tipo: "date" }
+const CAMPO_ADUANA_SALIDA: CampoPaso = { name: "aduana_salida_id", label: "Aduana de salida", tipo: "aduana" }
+const CAMPO_CONTENEDORES_OPC: CampoPaso = { name: "contenedores", label: "Contenedor(es) — opcional", tipo: "lista", addLabel: "Agregar contenedor", placeholder: "N.º de contenedor" }
+
+// Overrides de campos por (tipo → nombre de paso): quitar / opcional / reemplazar
+// / agregar. Aplica sobre los campos de PASOS para ese paso.
+export const CAMPOS_POR_TIPO: Record<string, Record<string, OverrideCampos>> = {
+  duca_f_importacion: {
+    "Notificación del embarque": { quitar: ["contenedores"] },
+    "Revisión de documentación": { quitar: ["marca", "modelo", "forma_pago", "forma_pago_otro"] },
+  },
+  exportacion_temporal: {
+    "Notificación del embarque": {
+      quitar: ["naviera"],
+      opcionales: ["contenedores"],
+      reemplazar: [{ de: "eta", por: CAMPO_ETD }, { de: "contenedores", por: CAMPO_CONTENEDORES_OPC }],
+    },
+    "Revisión de documentación": { quitar: ["marca", "modelo"] },
+  },
+  duca_f_exportacion: {
+    "Notificación del embarque": {
+      quitar: ["naviera"],
+      opcionales: ["contenedores"],
+      reemplazar: [{ de: "eta", por: CAMPO_ETD }, { de: "contenedores", por: CAMPO_CONTENEDORES_OPC }],
+    },
+    // Aforo y boletín "si aplica": se agrega un tristate *_aplica que, en No, no
+    // exige la etapa (patrón de faltantesParaAvanzar).
+    "Envío a aforo y digital": { agregar: [{ name: "aforo_aplica", label: "¿Aplica?", tipo: "tristate" }] },
+    "Envío del boletín": { agregar: [{ name: "boletin_aplica", label: "¿Aplica?", tipo: "tristate" }] },
+  },
+  exportacion_definitiva: {
+    "Notificación del embarque": {
+      reemplazar: [{ de: "eta", por: CAMPO_ETD }, { de: "aduana_id", por: CAMPO_ADUANA_SALIDA }],
+      agregar: [
+        { name: "permiso_sepa", label: "N.º permiso SEPA (opcional)", tipo: "text" },
+        { name: "permiso_arsa", label: "N.º permiso ARSA (opcional)", tipo: "text" },
+        { name: "permiso_banco_central", label: "N.º declaración Banco Central (opcional)", tipo: "text" },
+      ],
+    },
+    "Envío a aforo y digital": { agregar: [{ name: "aforo_aplica", label: "¿Aplica?", tipo: "tristate" }] },
+  },
+}
 
 // Secuencia de estados del flujo de un tipo (nombres). Fallback a la base.
 export function secuenciaDeTipo(tipo: string | null | undefined): string[] {

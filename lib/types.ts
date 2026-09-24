@@ -163,6 +163,21 @@ export interface Gestion {
   // Paso 13 — Cierre
   recibido: boolean
 
+  // Flujos por tipo de operación (exportaciones, DUCA F, FYDUCA)
+  etd: string | null
+  fecha_vencimiento: string | null
+  aduana_salida_id: string | null
+  permiso_sepa: string | null
+  permiso_arsa: string | null
+  permiso_banco_central: string | null
+  numero_mandamiento: string | null
+  numero_fyduca: string | null
+  frontera_despachado: boolean | null
+  frontera_fecha: string | null
+  frontera_observacion: string | null
+  aforo_aplica: boolean | null
+  boletin_aplica: boolean | null
+
   created_at: string
   empresa?: Pick<Empresa, "id" | "nombre"> | null
   operador?: Pick<Usuario, "id" | "nombre"> | null

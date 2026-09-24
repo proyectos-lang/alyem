@@ -27,6 +27,16 @@ export const COLUMNAS_REPORTE: ColumnaReporte[] = [
   { key: "contenedor", label: "Contenedor" },
   { key: "manifiesto", label: "Manifiesto" },
   { key: "prefijo", label: "Prefijo (código de aduana)" },
+  // Campos de flujos por tipo (exportaciones, DUCA F, FYDUCA).
+  { key: "etd", label: "ETD" },
+  { key: "aduana_salida", label: "Aduana de salida" },
+  { key: "fecha_vencimiento", label: "Fecha de vencimiento" },
+  { key: "numero_fyduca", label: "Número de FYDUCA" },
+  { key: "numero_mandamiento", label: "Número de mandamiento" },
+  { key: "permiso_sepa", label: "Permiso SEPA" },
+  { key: "permiso_arsa", label: "Permiso ARSA" },
+  { key: "permiso_banco_central", label: "Declaración Banco Central" },
+  { key: "frontera", label: "Despacho de frontera" },
   // Datos del tracking del contenedor (última consulta a la naviera).
   { key: "tk_ubicacion", label: "Tracking: última ubicación" },
   { key: "tk_puerto_carga", label: "Tracking: puerto de carga" },

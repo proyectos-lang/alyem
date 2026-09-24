@@ -4,6 +4,7 @@ import { diasEnEtapa, alertasDe, tiemposEntreProcesos } from "./metricas"
 import { predecirRetrasos } from "./prediccion"
 import { estadoUtoh } from "../utoh"
 import { getConfig } from "../config"
+import { notificarEmpresa } from "../actions/notificaciones"
 
 const ADMIN_VIRTUAL = { id: "", rol: "admin" as const, empresa_id: null }
 const hoyISO = () => new Date().toISOString().slice(0, 10)
@@ -43,6 +44,47 @@ export async function ejecutarEscalamientoSla(): Promise<{ escalados: number }> 
     escalados++
   }
   return { escalados }
+}
+
+// ---- Alerta de vencimiento de exportación temporal --------------------------
+// Notifica al operador y al cliente cuando faltan 14 días o menos para la fecha
+// de vencimiento de una exportación temporal (una sola vez por operación).
+const DIAS_ALERTA_VENCIMIENTO = 14
+export async function alertarVencimientosExportacionTemporal(): Promise<{ alertados: number }> {
+  const sb = getSupabase()
+  const gestiones = await listarGestiones(ADMIN_VIRTUAL)
+  const activas = gestiones.filter(
+    (g) => g.tipo_operacion === "exportacion_temporal" && g.estado?.tipo !== "final" && g.estado?.tipo !== "cancelada",
+  )
+  if (activas.length === 0) return { alertados: 0 }
+
+  const { data: previos } = await sb.from("alertas_vencimiento").select("gestion_id")
+  const yaAlertado = new Set((previos as { gestion_id: string }[] ?? []).map((r) => r.gestion_id))
+
+  const hoy = new Date(hoyISO()).getTime()
+  let alertados = 0
+  for (const g of activas) {
+    const venc = (g as { fecha_vencimiento?: string | null }).fecha_vencimiento
+    if (!venc) continue
+    const dias = Math.ceil((new Date(venc).getTime() - hoy) / 86_400_000)
+    if (dias > DIAS_ALERTA_VENCIMIENTO) continue // aún lejos
+    if (yaAlertado.has(g.id)) continue
+
+    const { error } = await sb.from("alertas_vencimiento").insert({ gestion_id: g.id })
+    if (error) continue // tabla ausente o conflicto único
+
+    const msg =
+      dias < 0
+        ? `⚠️ ${g.referencia}: la exportación temporal VENCIÓ hace ${Math.abs(dias)} día(s).`
+        : `⏳ ${g.referencia}: la exportación temporal vence en ${dias} día(s) (${venc}).`
+    // Cliente (empresa) + operador de la operación.
+    await notificarEmpresa(g.empresa_id, "vencimiento_temporal", msg, g.id)
+    if (g.operador_id) {
+      await sb.from("notificaciones").insert({ usuario_id: g.operador_id, tipo: "vencimiento_temporal", gestion_id: g.id, mensaje: msg })
+    }
+    alertados++
+  }
+  return { alertados }
 }
 
 // ---- Resumen diario ----------------------------------------------------------

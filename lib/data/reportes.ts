@@ -32,6 +32,7 @@ export interface FilaReporte extends GestionConEstado {
   doc_transporte?: string | null
   regimen_nombre?: string | null
   tracking?: TrackingResumen | null
+  aduana_salida?: { id: string; nombre: string; codigo: string } | null
 }
 
 const SEL =
@@ -93,6 +94,21 @@ export async function filasReporte(
     const { data: regs } = await sb.from("regimenes").select("id, nombre").in("id", regIds)
     const rmap = new Map((regs as { id: string; nombre: string }[] ?? []).map((r) => [r.id, r.nombre]))
     for (const g of filas) g.regimen_nombre = g.regimen_id ? rmap.get(g.regimen_id) ?? null : null
+  }
+
+  // Aduana de salida (resuelta aparte, resiliente si la columna aún no existe).
+  try {
+    const salIds = [...new Set(filas.map((g) => (g as { aduana_salida_id?: string | null }).aduana_salida_id).filter(Boolean))] as string[]
+    if (salIds.length) {
+      const { data: ads } = await sb.from("aduanas").select("id, nombre, codigo").in("id", salIds)
+      const amap = new Map((ads as { id: string; nombre: string; codigo: string }[] ?? []).map((a) => [a.id, a]))
+      for (const g of filas) {
+        const sid = (g as { aduana_salida_id?: string | null }).aduana_salida_id
+        g.aduana_salida = sid ? amap.get(sid) ?? null : null
+      }
+    }
+  } catch {
+    /* columna aduana_salida_id inexistente (pre-migración): se ignora */
   }
 
   // Documento de transporte por gestión.
@@ -157,6 +173,16 @@ export function valorColumna(g: FilaReporte, key: string): string {
     case "prefijo": return g.aduana?.codigo ?? ""
     case "tipo_operacion": return labelTipoOperacion(g.tipo_operacion)
     case "regimen": return g.regimen_nombre ?? ""
+    // Campos de flujos por tipo.
+    case "etd": return g.etd ? fecha(g.etd) : ""
+    case "aduana_salida": return g.aduana_salida?.nombre ?? ""
+    case "fecha_vencimiento": return g.fecha_vencimiento ? fecha(g.fecha_vencimiento) : ""
+    case "numero_fyduca": return g.numero_fyduca ?? ""
+    case "numero_mandamiento": return g.numero_mandamiento ?? ""
+    case "permiso_sepa": return g.permiso_sepa ?? ""
+    case "permiso_arsa": return g.permiso_arsa ?? ""
+    case "permiso_banco_central": return g.permiso_banco_central ?? ""
+    case "frontera": return g.frontera_despachado == null ? "" : g.frontera_despachado ? `Sí${g.frontera_fecha ? ` (${fecha(g.frontera_fecha)})` : ""}` : "No"
     // Tracking del contenedor (última consulta a la naviera).
     case "tk_ubicacion": return g.tracking?.ubicacion ?? ""
     case "tk_puerto_carga": return g.tracking?.puerto_carga ?? ""

@@ -365,21 +365,32 @@ const TEXT = [
   "descripcion_carga", "origen_carga", "marca", "modelo", "forma_pago_otro", "razon_social",
   "rtn", "numeros_factura", "carta_porte", "numero_np", "correlativo_liquidacion",
   "naviera_observaciones", "gatepass_observacion", "numero_orden_compra", "numero_pedido",
+  // Flujos por tipo (Fase 3): permisos, mandamiento, FYDUCA, despacho de frontera.
+  "permiso_sepa", "permiso_arsa", "permiso_banco_central",
+  "numero_mandamiento", "numero_fyduca", "frontera_observacion",
 ]
 const NUM = ["valor_fob", "valor_flete", "valor_seguro", "otros_gastos", "kilos", "bultos", "tiempo_libre_dias"]
 const DATE = [
   "eta", "fecha_fin_dias_libres", "fecha_revision", "fecha_aprobacion_aduana",
   "fecha_revision_opc", "fecha_posicionamiento_equipos", "fecha_levante",
+  // Flujos por tipo (Fase 3): ETD, vencimiento, fecha de despacho de frontera.
+  "etd", "fecha_vencimiento", "frontera_fecha",
 ]
 const DATETIME = ["fecha_hora_despacho", "gatepass_fecha_hora"]
-const ENUM = ["tipo_operacion", "forma_pago", "estado_factura", "canal_selectivo", "aduana_id", "regimen_id", "gatepass_entregado"]
+const ENUM = ["tipo_operacion", "forma_pago", "estado_factura", "canal_selectivo", "aduana_id", "aduana_salida_id", "regimen_id", "gatepass_entregado"]
 const TRISTATE = [
   "aforo", "digital", "previa", "duca_t", "naviera_aplica", "manifiesto_presentado", "liberacion",
   "doc_transporte_original", "boletin_enviado", "boletin_pagado", "gatepass_aplica",
-  "transporte_naviera",
+  "transporte_naviera", "frontera_despachado", "aforo_aplica", "boletin_aplica",
 ]
 // Columnas que pueden no estar migradas aún; si el update falla, se reintenta sin ellas.
-const POSIBLES_SIN_MIGRAR = ["duca_t", "numero_orden_compra", "numero_pedido", "gatepass_entregado"]
+const POSIBLES_SIN_MIGRAR = [
+  "duca_t", "numero_orden_compra", "numero_pedido", "gatepass_entregado",
+  "etd", "fecha_vencimiento", "aduana_salida_id", "permiso_sepa", "permiso_arsa",
+  "permiso_banco_central", "numero_mandamiento", "numero_fyduca",
+  "frontera_despachado", "frontera_fecha", "frontera_observacion",
+  "aforo_aplica", "boletin_aplica",
+]
 
 export async function editarDatosGestion(form: FormData) {
   const usuario = await getUsuarioActivo()
