@@ -36,7 +36,7 @@ export interface FilaReporte extends GestionConEstado {
 }
 
 const SEL =
-  "*, empresa:empresas(id, nombre), operador:usuarios!gestiones_operador_id_fkey(id, nombre), aduana:aduanas(id, nombre, codigo)"
+  "*, empresa:empresas(id, nombre), operador:usuarios!gestiones_operador_id_fkey(id, nombre), aduana:aduanas!gestiones_aduana_id_fkey(id, nombre, codigo)"
 
 // Filas para el reporte, respetando el alcance por empresa (cliente / operador).
 export async function filasReporte(

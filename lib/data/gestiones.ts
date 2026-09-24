@@ -12,7 +12,7 @@ import type {
 } from "../types"
 
 const SEL_GESTION =
-  "*, empresa:empresas(id, nombre), operador:usuarios!gestiones_operador_id_fkey(id, nombre), aduana:aduanas(id, nombre, codigo)"
+  "*, empresa:empresas(id, nombre), operador:usuarios!gestiones_operador_id_fkey(id, nombre), aduana:aduanas!gestiones_aduana_id_fkey(id, nombre, codigo)"
 
 export interface EstadoDerivado {
   nombre: string

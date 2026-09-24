@@ -18,7 +18,7 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
 
   const { data: g } = await sb
     .from("gestiones")
-    .select("*, aduana:aduanas(nombre, codigo)")
+    .select("*, aduana:aduanas!gestiones_aduana_id_fkey(nombre, codigo)")
     .eq("public_token", token)
     .maybeSingle()
   if (!g) notFound()
