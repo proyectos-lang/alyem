@@ -524,12 +524,26 @@ export function faltantesParaAvanzar(
 }
 
 // Mapa columna de `gestiones` → índice de etapa (0-based, orden de PASOS),
-// tomando la primera etapa que declara el campo.
+// tomando la primera etapa que declara el campo. Incluye también los campos que
+// los overrides por tipo introducen (agregar / reemplazar.por, p. ej. etd,
+// aduana_salida_id, permisos, frontera_*), asociados a la etapa donde aparecen,
+// para que el bloqueo por rol de operador (etapaIndexDeCampo) no los trate como
+// datos de cabecera y bloquee su guardado.
 const CAMPO_ETAPA_IDX: Map<string, number> = (() => {
   const m = new Map<string, number>()
+  const idxDe = (nombrePaso: string) => PASOS.findIndex((p) => p.nombre === nombrePaso)
   PASOS.forEach((p, i) => {
     for (const c of p.campos) if (!m.has(c.name)) m.set(c.name, i)
   })
+  // Campos introducidos por overrides de tipo (en la etapa donde se declaran).
+  for (const porPaso of Object.values(CAMPOS_POR_TIPO)) {
+    for (const [nombrePaso, ov] of Object.entries(porPaso)) {
+      const i = idxDe(nombrePaso)
+      if (i < 0) continue
+      for (const c of ov.agregar ?? []) if (!m.has(c.name)) m.set(c.name, i)
+      for (const r of ov.reemplazar ?? []) if (!m.has(r.por.name)) m.set(r.por.name, i)
+    }
+  }
   // El BL se guarda en carta_porte; comparte su etapa.
   const cp = m.get("carta_porte")
   if (cp != null) m.set("numero_bl", cp)
