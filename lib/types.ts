@@ -266,3 +266,42 @@ export interface Calificacion {
   comentario: string | null
   created_at: string
 }
+
+// --- Módulo Descargas parciales (régimen 7000, almacén fiscal) ---
+export interface DescargaCabecera {
+  id: string
+  referencia: string
+  bl: string | null
+  empresa_id: string
+  aduana_id: string | null
+  regimen_id: string | null
+  operador_id: string | null
+  producto: string | null
+  cantidad_total: number
+  unidad: string
+  fecha_ingreso: string | null
+  fecha_vencimiento: string | null
+  observaciones: string | null
+  estado: string // 'abierta' | 'cerrada' | 'cancelada'
+  created_at: string
+  // Relaciones y derivados (resueltos en el data layer):
+  empresa?: Pick<Empresa, "id" | "nombre"> | null
+  aduana?: Pick<Aduana, "id" | "nombre" | "codigo"> | null
+  operador?: Pick<Usuario, "id" | "nombre"> | null
+  retirado?: number // Σ de las cantidades de sus parciales
+  saldo?: number // cantidad_total − retirado
+}
+
+export interface DescargaParcial {
+  id: string
+  cabecera_id: string
+  cantidad: number
+  correlativo_liquidacion: string | null
+  boletin_enviado: boolean | null
+  boletin_pagado: boolean | null
+  canal_selectivo: CanalSelectividad | null
+  fecha: string | null
+  observaciones: string | null
+  registrado_por: string | null
+  created_at: string
+}

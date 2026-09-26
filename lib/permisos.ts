@@ -14,6 +14,8 @@ export const PERMISOS = {
   MENSAJE_ENVIAR: "mensaje.enviar",
   CALIFICACION_CREAR: "calificacion.crear",
   REPORTES_VER: "reportes.ver",
+  DESCARGA_VER: "descarga.ver",
+  DESCARGA_CREAR: "descarga.crear",
   ADMIN_EMPRESAS: "admin.empresas",
   ADMIN_USUARIOS: "admin.usuarios",
   ADMIN_CATALOGOS: "admin.catalogos",
@@ -36,6 +38,8 @@ export const PERMISOS_META: { clave: ClavePermiso; etiqueta: string; grupo: stri
   { clave: PERMISOS.MENSAJE_ENVIAR, etiqueta: "Enviar mensajes", grupo: "Colaboración" },
   { clave: PERMISOS.CALIFICACION_CREAR, etiqueta: "Calificar el servicio", grupo: "Colaboración" },
   { clave: PERMISOS.REPORTES_VER, etiqueta: "Ver reportes", grupo: "Reportes" },
+  { clave: PERMISOS.DESCARGA_VER, etiqueta: "Ver descargas parciales (régimen 7000)", grupo: "Descargas parciales" },
+  { clave: PERMISOS.DESCARGA_CREAR, etiqueta: "Registrar descargas parciales y descargos", grupo: "Descargas parciales" },
   { clave: PERMISOS.ADMIN_EMPRESAS, etiqueta: "Administrar empresas", grupo: "Administración" },
   { clave: PERMISOS.ADMIN_USUARIOS, etiqueta: "Administrar usuarios y permisos", grupo: "Administración" },
   { clave: PERMISOS.ADMIN_CATALOGOS, etiqueta: "Administrar catálogos", grupo: "Administración" },
@@ -65,6 +69,8 @@ const DEFAULTS: Record<Rol, ClavePermiso[]> = {
     P.DOCUMENTO_REVISAR,
     P.MENSAJE_ENVIAR,
     P.REPORTES_VER,
+    P.DESCARGA_VER,
+    P.DESCARGA_CREAR,
   ],
   // Cliente aduanero (sub-agencia): crea clientes y operaciones a su nombre y las
   // consulta (Alyem las procesa). Ve solo su subárbol (vía empresasVisibles);

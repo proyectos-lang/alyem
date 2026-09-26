@@ -87,6 +87,50 @@ export async function alertarVencimientosExportacionTemporal(): Promise<{ alerta
   return { alertados }
 }
 
+// ---- Alerta de vencimiento de descargas parciales (almacén fiscal, rég. 7000)-
+// Notifica al operador y al cliente 14 días antes de que venza el plazo de la
+// carga en almacén fiscal (una sola vez por cabecera). Resiliente si las tablas
+// del módulo aún no existen (pre-migración 34).
+export async function alertarVencimientosDescargas(): Promise<{ alertados: number }> {
+  const sb = getSupabase()
+  try {
+    const { data: cabs } = await sb
+      .from("descargas_cabecera")
+      .select("id, referencia, empresa_id, operador_id, fecha_vencimiento")
+      .eq("estado", "abierta")
+      .not("fecha_vencimiento", "is", null)
+    const abiertas = (cabs as { id: string; referencia: string; empresa_id: string; operador_id: string | null; fecha_vencimiento: string }[]) ?? []
+    if (abiertas.length === 0) return { alertados: 0 }
+
+    const { data: previos } = await sb.from("alertas_vencimiento_descarga").select("cabecera_id")
+    const yaAlertado = new Set((previos as { cabecera_id: string }[] ?? []).map((r) => r.cabecera_id))
+
+    const hoy = new Date(hoyISO()).getTime()
+    let alertados = 0
+    for (const c of abiertas) {
+      const dias = Math.ceil((new Date(c.fecha_vencimiento).getTime() - hoy) / 86_400_000)
+      if (dias > DIAS_ALERTA_VENCIMIENTO) continue
+      if (yaAlertado.has(c.id)) continue
+
+      const { error } = await sb.from("alertas_vencimiento_descarga").insert({ cabecera_id: c.id })
+      if (error) continue
+
+      const msg =
+        dias < 0
+          ? `⚠️ Descarga ${c.referencia}: el plazo en almacén fiscal VENCIÓ hace ${Math.abs(dias)} día(s).`
+          : `⏳ Descarga ${c.referencia}: el plazo en almacén fiscal vence en ${dias} día(s) (${c.fecha_vencimiento}).`
+      await notificarEmpresa(c.empresa_id, "vencimiento_descarga", msg)
+      if (c.operador_id) {
+        await sb.from("notificaciones").insert({ usuario_id: c.operador_id, tipo: "vencimiento_descarga", mensaje: msg })
+      }
+      alertados++
+    }
+    return { alertados }
+  } catch {
+    return { alertados: 0 } // tablas del módulo aún no migradas
+  }
+}
+
 // ---- Resumen diario ----------------------------------------------------------
 export interface ResumenDia {
   fecha: string

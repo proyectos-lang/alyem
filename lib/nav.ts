@@ -19,6 +19,7 @@ import {
   ScrollText,
   LineChart,
   ClipboardList,
+  PackageMinus,
 } from "lucide-react"
 import type { Rol } from "./types"
 import { PERMISOS, type ClavePermiso } from "./permisos"
@@ -98,6 +99,7 @@ function grupos(rol: Rol): NavGroup[] {
       { href: "/agencia", label: "Bandeja", icon: Inbox, color: "#0ea5e9", descripcion: "Lo que requiere tu atención hoy y solicitudes nuevas." },
       { href: "/agencia/kanban", label: "Tablero", icon: KanbanSquare, permiso: P.GESTION_VER_TODAS, color: "#14b8a6", descripcion: "Carga de trabajo por estado (Kanban o listado)." },
       { href: "/agencia/gestiones", label: "Operaciones", icon: Boxes, permiso: P.GESTION_VER_TODAS, color: "#f48029", descripcion: "Todas las operaciones de la agencia, con filtros y export." },
+      { href: "/agencia/descargas", label: "Descargas parciales", icon: PackageMinus, permiso: P.DESCARGA_VER, color: "#d97706", descripcion: "Régimen 7000: ingresos a almacén fiscal y sus retiros parciales." },
       { href: "/agencia/documentos", label: "Documentos", icon: FolderClosed, permiso: P.GESTION_VER_TODAS, color: "#f59e0b", descripcion: "Documentos organizados por cliente e importación." },
       { href: "/agencia/reportes", label: "Reportes", icon: FileText, permiso: P.REPORTES_VER, color: "#10b981", descripcion: "Constructor de reportes y definiciones guardadas." },
     ],
