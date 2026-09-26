@@ -26,6 +26,7 @@ export async function DocumentosPanel({
   puedeSubir,
   puedeRevisar,
   puedeRequerir,
+  puedeReemplazar = false,
 }: {
   gestionId: string
   documentos: Documento[]
@@ -34,6 +35,7 @@ export async function DocumentosPanel({
   puedeSubir: boolean
   puedeRevisar: boolean
   puedeRequerir: boolean
+  puedeReemplazar?: boolean // agencia: reemplazar/resubir un documento ya entregado
 }) {
   const pendientes = requeridos.filter((r) => !r.cumplido)
   // URLs firmadas temporales (bucket privado).
@@ -93,6 +95,11 @@ export async function DocumentosPanel({
                         {r.cumplido ? (
                           <>
                             {entregado && <VisorDocumento url={urlEntregado ?? null} nombre={entregado.nombre_archivo} />}
+                            {puedeReemplazar && (
+                              <Modal title={`Reemplazar: ${r.tipo?.nombre ?? "documento"}`} trigger={<Button size="xs" variant="outline"><Upload /> Reemplazar</Button>}>
+                                <SubirDocumentoForm gestionId={gestionId} tipos={tipos} tipoFijo={r.tipo_documento_id} />
+                              </Modal>
+                            )}
                             <Badge variant="success"><CheckCircle2 className="size-3" /> Entregado</Badge>
                           </>
                         ) : (
@@ -132,7 +139,11 @@ export async function DocumentosPanel({
             <p className="text-sm text-muted-foreground">Aún no hay documentos.</p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {documentos.map((d) => {
+              {documentos
+                // Solo la última versión de cada tipo (las anteriores quedan como
+                // historial referenciado, no se listan). Los sin tipo, todos.
+                .filter((d) => !d.tipo_documento_id || docPorTipo.get(d.tipo_documento_id)?.id === d.id)
+                .map((d) => {
                 const badge =
                   d.estado === "aceptado" && d.observaciones
                     ? { variant: "warning" as const, label: "Aceptado c/ observaciones", icon: CheckCircle2 }
@@ -160,6 +171,12 @@ export async function DocumentosPanel({
                         <badge.icon className="size-3" /> {badge.label}
                       </Badge>
                       <VisorDocumento url={url ?? null} nombre={d.nombre_archivo} />
+                      {/* Reemplazar (agencia): solo la última versión de un documento con tipo. */}
+                      {puedeReemplazar && d.tipo_documento_id && docPorTipo.get(d.tipo_documento_id)?.id === d.id && (
+                        <Modal title={`Reemplazar: ${d.tipo?.nombre ?? "documento"}`} trigger={<Button size="xs" variant="outline"><Upload /> Reemplazar</Button>}>
+                          <SubirDocumentoForm gestionId={gestionId} tipos={tipos} tipoFijo={d.tipo_documento_id} />
+                        </Modal>
+                      )}
                       {puedeRevisar && d.estado === "pendiente" && <RevisarDocumento id={d.id} />}
                     </div>
                   </li>

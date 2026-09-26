@@ -440,6 +440,7 @@ export const CAMPOS_POR_TIPO: Record<string, Record<string, OverrideCampos>> = {
       opcionales: ["contenedores"],
       reemplazar: [{ de: "eta", por: CAMPO_ETD }, { de: "contenedores", por: CAMPO_CONTENEDORES_OPC }],
     },
+    "Revisión de documentación": { quitar: ["marca", "modelo", "forma_pago", "forma_pago_otro"] },
     // Aforo y boletín "si aplica": se agrega un tristate *_aplica que, en No, no
     // exige la etapa (patrón de faltantesParaAvanzar).
     "Envío a aforo y digital": { agregar: [{ name: "aforo_aplica", label: "¿Aplica?", tipo: "tristate" }] },

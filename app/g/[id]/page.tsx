@@ -277,6 +277,7 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
               puedeSubir={puede(usuario, PERMISOS.DOCUMENTO_SUBIR)}
               puedeRevisar={agencia && puede(usuario, PERMISOS.DOCUMENTO_REVISAR)}
               puedeRequerir={agencia && puede(usuario, PERMISOS.DOCUMENTO_REQUERIR)}
+              puedeReemplazar={agencia && puede(usuario, PERMISOS.DOCUMENTO_SUBIR)}
             />
           </TabsContent>
 
