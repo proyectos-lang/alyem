@@ -6,7 +6,7 @@ import { getUsuarioActivo } from "../session"
 import { exigir, PERMISOS } from "../permisos"
 import { getConfig } from "../config"
 import { empresasVisibles } from "../data/asignaciones"
-import { faltantesParaAvanzar, etapaIndexDeCampo, etapaIndexPorNombre, indiceEtapaSiempreEditable, INMUTABLES, secuenciaDeTipo } from "../pasos"
+import { faltantesParaAvanzar, INMUTABLES, secuenciaDeTipo, camposDePaso, etapaSiempreEditable, PASOS } from "../pasos"
 import { notificarAgencia, notificarEmpresa } from "./notificaciones"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
@@ -444,6 +444,10 @@ export async function editarDatosGestion(form: FormData) {
     .eq("gestion_id", gestionId)
     .maybeSingle()
   const estadoTipo = (est as { estado_tipo?: string } | null)?.estado_tipo
+  const estadoNombre = (est as { estado_nombre?: string } | null)?.estado_nombre ?? null
+  // Tipo de operación: define el flujo (qué campos pertenecen a cada etapa).
+  const { data: gTipoEdit } = await sb.from("gestiones").select("tipo_operacion").eq("id", gestionId).maybeSingle()
+  const tipoOpEdit = (gTipoEdit as { tipo_operacion?: string } | null)?.tipo_operacion ?? null
 
   // Regla: operación cerrada o finalizada → no se editan sus datos, con UNA
   // excepción: el número de ENP (numero_np) puede corregirse siempre. Si el
@@ -475,15 +479,25 @@ export async function editarDatosGestion(form: FormData) {
   }
 
   // Bloqueo por rol: los operadores solo pueden diligenciar campos de la etapa
-  // ACTUAL. Las etapas ya completadas, las posteriores y los datos de
+  // ACTUAL de su flujo. Las etapas ya completadas, las posteriores y los datos de
   // cabecera/intake quedan reservados al administrador.
+  // Se resuelve por NOMBRE de etapa (no por índice global), porque un mismo campo
+  // puede pertenecer a varias etapas según el tipo (p. ej. boletin_pagado está en
+  // "Pago del boletín" y también en "Pago de FYDUCA").
   if (usuario!.rol !== "admin" && Object.keys(patch).length > 0) {
-    const currentIndex = etapaIndexPorNombre((est as { estado_nombre?: string } | null)?.estado_nombre)
+    // Campos que la etapa ACTUAL del flujo del tipo declara (con overrides).
+    const camposEtapaActual = new Set(
+      estadoNombre ? camposDePaso(tipoOpEdit, estadoNombre).map((c) => c.name) : [],
+    )
+    // Campos de las etapas "siempre editables" (Notificación / ENP).
+    const camposSiempreEditables = new Set<string>()
+    for (const p of PASOS) {
+      if (etapaSiempreEditable(p.nombre)) for (const c of p.campos) camposSiempreEditables.add(c.name)
+    }
     const bloqueados = Object.keys(patch).filter((campo) => {
-      const i = etapaIndexDeCampo(campo)
-      // Paso 1 (Notificación) y ENP (número NP pendiente): editables por el operador siempre.
-      if (indiceEtapaSiempreEditable(i)) return false
-      return i === null || (currentIndex >= 0 && i !== currentIndex)
+      if (camposEtapaActual.has(campo)) return false // pertenece a la etapa actual
+      if (camposSiempreEditables.has(campo)) return false // intake / ENP
+      return true // dato de otra etapa o de cabecera → reservado al admin
     })
     if (bloqueados.length > 0) {
       throw new Error("Solo puedes diligenciar la etapa actual. Las demás las edita un administrador.")
