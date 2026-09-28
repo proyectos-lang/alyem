@@ -85,6 +85,10 @@ export async function registrarDocumento(
   tipoId: string | null,
   path: string,
   nombreArchivo: string,
+  // Versionar = este documento REEMPLAZA al último del mismo tipo (comportamiento
+  // del botón "Reemplazar" y de subir de a uno). En una subida MÚLTIPLE los
+  // archivos deben coexistir, así que se registran sin reemplazarse entre sí.
+  versionar = true,
 ) {
   const usuario = await getUsuarioActivo()
   exigir(usuario, PERMISOS.DOCUMENTO_SUBIR)
@@ -93,7 +97,7 @@ export async function registrarDocumento(
   // Versionado: si ya hay un documento del mismo tipo, este lo reemplaza.
   let version = 1
   let reemplazaA: string | null = null
-  if (tipoId) {
+  if (tipoId && versionar) {
     const { data: prev } = await sb
       .from("documentos")
       .select("id, version")

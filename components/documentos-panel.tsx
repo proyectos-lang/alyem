@@ -49,6 +49,11 @@ export async function DocumentosPanel({
     const actual = docPorTipo.get(d.tipo_documento_id)
     if (!actual || d.version > actual.version) docPorTipo.set(d.tipo_documento_id, d)
   }
+  // Documentos que fueron REEMPLAZADOS (existe otro que apunta a ellos con
+  // reemplaza_a): se ocultan de la lista. Los que coexisten (subida múltiple, sin
+  // reemplazo) se muestran todos.
+  const reemplazados = new Set<string>()
+  for (const d of documentos) if (d.reemplaza_a) reemplazados.add(d.reemplaza_a)
 
   return (
     <div className="flex flex-col gap-4">
@@ -140,9 +145,9 @@ export async function DocumentosPanel({
           ) : (
             <ul className="flex flex-col gap-2">
               {documentos
-                // Solo la última versión de cada tipo (las anteriores quedan como
-                // historial referenciado, no se listan). Los sin tipo, todos.
-                .filter((d) => !d.tipo_documento_id || docPorTipo.get(d.tipo_documento_id)?.id === d.id)
+                // Oculta solo las versiones REEMPLAZADAS (quedan como historial).
+                // Los documentos que coexisten (subida múltiple) se muestran todos.
+                .filter((d) => !reemplazados.has(d.id))
                 .map((d) => {
                 const badge =
                   d.estado === "aceptado" && d.observaciones

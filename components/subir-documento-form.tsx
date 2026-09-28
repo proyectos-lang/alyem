@@ -32,27 +32,45 @@ export function SubirDocumentoForm({
     setError(null)
     const fd = new FormData(e.currentTarget)
     const tipoId = (fd.get("tipo_documento_id") as string) || null
-    const file = fd.get("archivo") as File | null
-    if (!file || file.size === 0) {
-      setError("Selecciona un archivo.")
+    // Varios archivos: todos quedan con el mismo tipo seleccionado.
+    const archivos = (fd.getAll("archivo") as File[]).filter((f) => f && f.size > 0)
+    if (archivos.length === 0) {
+      setError("Selecciona al menos un archivo.")
       return
     }
     startTransition(async () => {
-      try {
-        // Sube directo a Storage (navegador → Supabase), evitando el límite de body (413).
-        const { bucket, path, token } = await firmarSubidaAdjunto(gestionId, file.name)
-        const sb = getSupabaseBrowser()
-        if (!sb) throw new Error("No se pudo inicializar la subida.")
-        const up = await sb.storage.from(bucket).uploadToSignedUrl(path, token, file, { contentType: file.type || undefined })
-        if (up.error) throw new Error(up.error.message)
-        await registrarDocumento(gestionId, tipoId, path, file.name)
-        toast.success("Documento subido.")
-        close()
-        router.refresh()
-      } catch (err) {
-        setError((err as Error).message)
-        toast.error((err as Error).message)
+      const sb = getSupabaseBrowser()
+      if (!sb) {
+        setError("No se pudo inicializar la subida.")
+        toast.error("No se pudo inicializar la subida.")
+        return
       }
+      let ok = 0
+      const fallidos: string[] = []
+      // Al subir VARIOS, deben coexistir (no versionarse entre sí). Con un solo
+      // archivo se mantiene el versionado/reemplazo del documento del mismo tipo.
+      const versionar = archivos.length === 1
+      // Sube cada archivo directo a Storage (navegador → Supabase, evita el 413) y
+      // lo registra. Un fallo en uno no aborta los demás.
+      for (const file of archivos) {
+        try {
+          const { bucket, path, token } = await firmarSubidaAdjunto(gestionId, file.name)
+          const up = await sb.storage.from(bucket).uploadToSignedUrl(path, token, file, { contentType: file.type || undefined })
+          if (up.error) throw new Error(up.error.message)
+          await registrarDocumento(gestionId, tipoId, path, file.name, versionar)
+          ok++
+        } catch (err) {
+          fallidos.push(`${file.name}: ${(err as Error).message}`)
+        }
+      }
+      if (ok > 0) toast.success(ok === 1 ? "Documento subido." : `${ok} documentos subidos.`)
+      if (fallidos.length > 0) {
+        const msg = `No se pudieron subir ${fallidos.length}: ${fallidos.join("; ")}`
+        setError(msg)
+        toast.error(msg)
+      }
+      router.refresh()
+      if (fallidos.length === 0) close()
     })
   }
 
@@ -81,13 +99,14 @@ export function SubirDocumentoForm({
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label>Archivo (PDF o imagen)</Label>
-        <Input name="archivo" type="file" accept="application/pdf,image/*" required />
+        <Label>Archivo(s) (PDF o imagen)</Label>
+        <Input name="archivo" type="file" accept="application/pdf,image/*" multiple required />
+        <span className="text-[11px] text-muted-foreground">Puedes seleccionar varios archivos; todos quedarán con el tipo elegido.</span>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>
-          {pending ? "Subiendo…" : "Subir documento"}
+          {pending ? "Subiendo…" : "Subir documento(s)"}
         </Button>
       </div>
     </form>
