@@ -36,6 +36,8 @@ export async function guardarEmpresa(form: FormData): Promise<{ id: string }> {
     utoh_vencimiento: (form.get("utoh_vencimiento") as string) || null,
     // Cliente aduanero al que pertenece esta empresa (su subárbol). "" = ninguno.
     cliente_aduanero_id: (form.get("cliente_aduanero_id") as string) || null,
+    // Consolidadora: agrupa clientes finales (se captura cliente_final por operación).
+    es_consolidadora: form.get("es_consolidadora") === "on" || form.get("es_consolidadora") === "true",
   }
 
   let empresaId = id

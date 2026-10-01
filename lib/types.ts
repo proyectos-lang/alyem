@@ -36,6 +36,9 @@ export interface Empresa {
   // Si la empresa es cliente final de un cliente aduanero, apunta a la empresa
   // de ese cliente aduanero. null = cliente directo de Alyem.
   cliente_aduanero_id: string | null
+  // Consolidadora: agrupa clientes finales; al crear una operación a su nombre se
+  // captura cliente_final (texto), que se muestra en la operación.
+  es_consolidadora: boolean
   activo: boolean
   created_at: string
 }
@@ -87,6 +90,7 @@ export interface Gestion {
   operador_id: string | null
   tipo_operacion: TipoOperacion
   consignatario: string | null
+  cliente_final: string | null // nombre del cliente final (cuando la empresa es consolidadora)
   contenedores: string | null
   public_token: string
   fecha_solicitud: string

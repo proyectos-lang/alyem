@@ -139,9 +139,11 @@ async function crearGestionInterno(form: FormData): Promise<string> {
   }
 
   let consignatario = usuario!.empresa?.nombre ?? null
+  let empresaEsConsolidadora = false
   if (eligeEmpresa) {
-    const { data: emp } = await sb.from("empresas").select("nombre").eq("id", empresaId).maybeSingle()
+    const { data: emp } = await sb.from("empresas").select("nombre, es_consolidadora").eq("id", empresaId).maybeSingle()
     consignatario = (emp?.nombre as string) ?? null
+    empresaEsConsolidadora = !!(emp as { es_consolidadora?: boolean } | null)?.es_consolidadora
   }
 
   // Referencia = el número de BL tal cual (cualquier carácter y longitud; se
@@ -156,6 +158,8 @@ async function crearGestionInterno(form: FormData): Promise<string> {
     empresa_id: empresaId,
     operador_id: desdeAgencia ? usuario!.id : null,
     consignatario,
+    // Cliente final: solo se conserva si la empresa es consolidadora.
+    cliente_final: empresaEsConsolidadora ? ((form.get("cliente_final") as string) || null) : null,
     tipo_operacion: (form.get("tipo_operacion") as string) || "importacion",
     contenedores: (form.get("contenedores") as string) || null,
     naviera: (form.get("naviera") as string) || null,
@@ -173,7 +177,7 @@ async function crearGestionInterno(form: FormData): Promise<string> {
   let { data, error } = await sb.from("gestiones").insert(g).select("id").single()
   // Resiliencia: si las columnas nuevas aún no están migradas, reintenta sin ellas.
   if (error) {
-    const { numero_orden_compra: _oc, numero_pedido: _pd, ...gBase } = g
+    const { numero_orden_compra: _oc, numero_pedido: _pd, cliente_final: _cf, ...gBase } = g
     const r = await sb.from("gestiones").insert(gBase).select("id").single()
     if (r.error) throw new Error(r.error.message)
     data = r.data
@@ -361,7 +365,7 @@ export async function devolverEtapa(gestionId: string, motivo?: string) {
 
 // Edición genérica de datos del proceso (formularios por paso envían su subconjunto).
 const TEXT = [
-  "consignatario", "contenedores", "naviera", "proveedor", "numero_factura", "termino_compra",
+  "consignatario", "cliente_final", "contenedores", "naviera", "proveedor", "numero_factura", "termino_compra",
   "descripcion_carga", "origen_carga", "marca", "modelo", "forma_pago_otro", "razon_social",
   "rtn", "numeros_factura", "carta_porte", "numero_np", "correlativo_liquidacion",
   "naviera_observaciones", "gatepass_observacion", "numero_orden_compra", "numero_pedido",

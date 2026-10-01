@@ -147,6 +147,21 @@ export function EmpresaForm({
         Empresa activa
       </label>
 
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="es_consolidadora"
+          defaultChecked={empresa?.es_consolidadora ?? false}
+          className="mt-0.5 size-4 accent-[var(--primary)]"
+        />
+        <span>
+          Es consolidadora
+          <span className="block text-xs text-muted-foreground">
+            Al crear una operación a nombre de esta empresa se pedirá el nombre del cliente final.
+          </span>
+        </span>
+      </label>
+
       <div className="rounded-lg border border-border p-3">
         <p className="text-sm font-medium">Cliente aduanero</p>
         <p className="mt-1 text-xs text-muted-foreground">

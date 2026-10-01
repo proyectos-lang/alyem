@@ -57,8 +57,11 @@ export function NuevaGestionForm({
   const [subiendo, setSubiendo] = useState<{ i: number; total: number } | null>(null)
 
   const esAgencia = !!empresas
-  const [empresasLocal, setEmpresasLocal] = useState<Pick<Empresa, "id" | "nombre">[]>(empresas ?? [])
+  const [empresasLocal, setEmpresasLocal] = useState<Pick<Empresa, "id" | "nombre" | "es_consolidadora">[]>(empresas ?? [])
   const [empresaId, setEmpresaId] = useState("")
+  // ¿La empresa elegida es consolidadora? → se pide el cliente final.
+  const empresaSel = empresasLocal.find((e) => e.id === empresaId)
+  const esConsolidadora = !!empresaSel?.es_consolidadora
 
   const base = tipos.filter((t) => BASE.includes(t.nombre))
   const permisos = tipos.filter((t) => PERMISOS_DOC.includes(t.nombre))
@@ -154,12 +157,25 @@ export function NuevaGestionForm({
                 <Modal title="Nuevo cliente" trigger={<Button type="button" variant="outline"><UserPlus /> Nuevo</Button>}>
                   <NuevoClienteRapido
                     onCreado={(emp) => {
-                      setEmpresasLocal((prev) => [...prev, emp].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+                      // Un cliente nuevo nunca nace como consolidadora.
+                      const nuevo = { ...emp, es_consolidadora: false }
+                      setEmpresasLocal((prev) => [...prev, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)))
                       setEmpresaId(emp.id)
                     }}
                   />
                 </Modal>
               </div>
+            </div>
+          )}
+
+          {/* Cliente final: solo si la empresa elegida es una consolidadora. */}
+          {esAgencia && esConsolidadora && (
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label>Cliente final (consolidadora)</Label>
+              <Input name="cliente_final" required placeholder="Nombre del cliente final del embarque" />
+              <span className="text-[11px] text-muted-foreground">
+                {empresaSel?.nombre} es una consolidadora: este nombre se mostrará en la operación.
+              </span>
             </div>
           )}
 

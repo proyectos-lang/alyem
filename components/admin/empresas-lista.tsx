@@ -159,7 +159,10 @@ export function EmpresasLista({
               const nOps = asignados[e.id]?.length ?? 0
               return (
                 <TableRow key={e.id}>
-                  <TableCell className="font-medium">{e.nombre}</TableCell>
+                  <TableCell className="font-medium">
+                    {e.nombre}
+                    {e.es_consolidadora && <Badge variant="secondary" className="ml-2">Consolidadora</Badge>}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{e.id_fiscal ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.contacto ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.cuenta ?? "—"}</TableCell>

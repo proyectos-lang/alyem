@@ -111,6 +111,7 @@ export function GestionesTabla({
                 <TableCell className="text-muted-foreground">
                   <div className="flex flex-col items-start gap-1">
                     <span>{g.empresa?.nombre ?? "—"}</span>
+                    {g.cliente_final && <span className="text-xs font-medium text-foreground">Cliente final: {g.cliente_final}</span>}
                     {marcaDe(g.empresa_id) && <MarcaCA nombre={marcaDe(g.empresa_id)!.caNombre} />}
                   </div>
                 </TableCell>

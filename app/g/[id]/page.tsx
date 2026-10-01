@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowLeft, Pencil, Building2, Landmark, Ship, Container, CalendarClock, Briefcase } from "lucide-react"
+import { ArrowLeft, Pencil, Building2, Landmark, Ship, Container, CalendarClock, Briefcase, UserRound } from "lucide-react"
 import { PortalShell } from "@/components/portal-shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -128,6 +128,11 @@ export default async function DetalleGestion({ params }: { params: Promise<{ id:
                   {agencia && (
                     <span className="inline-flex items-center gap-1">
                       <Building2 className="size-3.5" /> {g.empresa?.nombre}
+                    </span>
+                  )}
+                  {g.cliente_final && (
+                    <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                      <UserRound className="size-3.5" /> Cliente final: {g.cliente_final}
                     </span>
                   )}
                   {g.aduana && (

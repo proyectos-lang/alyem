@@ -133,6 +133,10 @@ export function EditarDatosForm({
           <Label>Consignatario</Label>
           <Input name="consignatario" defaultValue={g.consignatario ?? ""} />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Cliente final (consolidadora)</Label>
+          <Input name="cliente_final" defaultValue={g.cliente_final ?? ""} placeholder="Solo si el cliente es consolidadora" />
+        </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <Label>Descripción de la carga</Label>
           <Textarea name="descripcion_carga" rows={2} defaultValue={g.descripcion_carga ?? ""} />
